@@ -1,9 +1,8 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 
 const MODEL = 'gemini-3-flash-preview';
 
-// Função auxiliar para obter a instância da IA
-// A API key deve vir exclusivamente de process.env.API_KEY
 const getAI = (): GoogleGenAI | null => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) return null;
@@ -12,7 +11,7 @@ const getAI = (): GoogleGenAI | null => {
 
 export const improveText = async (text: string, context: string = 'resume'): Promise<string> => {
   const ai = getAI();
-  if (!ai) return text; // Retorna o original se não houver chave, para não quebrar a UI
+  if (!ai) return text;
 
   try {
     const prompt = `Você é um especialista em currículos. Reescreva o texto abaixo para uma seção de "${context}".
@@ -27,6 +26,21 @@ export const improveText = async (text: string, context: string = 'resume'): Pro
   } catch (error) {
     console.error("Error improving text:", error);
     return text;
+  }
+};
+
+export const generateBulletPoints = async (role: string, company: string): Promise<string> => {
+  const ai = getAI();
+  if (!ai) return "";
+
+  try {
+    const prompt = `Gere 3 bullet points curtos e impactantes para um currículo, descrevendo conquistas comuns para o cargo de "${role}" na área de "${company || 'Tecnologia/Geral'}".
+    Formato: Apenas texto, um por linha, começando com verbos de ação. Português do Brasil. Sem marcadores no inicio.`;
+
+    const response = await ai.models.generateContent({ model: MODEL, contents: prompt });
+    return response.text?.trim() || "";
+  } catch (error) {
+    return "";
   }
 };
 
@@ -104,22 +118,52 @@ export const generateCoverLetter = async (resumeData: any, company: string, job:
   }
 };
 
-export const analyzeJobMatch = async (resumeText: string, jobDescription: string): Promise<string> => {
+export const analyzeJobMatch = async (resumeInput: string | { mimeType: string, data: string }, jobDescription: string): Promise<any> => {
   const ai = getAI();
-  if (!ai) return "Erro: API Key não configurada no ambiente.";
+  if (!ai) return null;
 
   try {
-    const prompt = `Atue como um sistema ATS (Applicant Tracking System).
-    Analise o meu currículo em relação à descrição da vaga.
+    const parts: any[] = [];
     
-    Vaga: "${jobDescription.substring(0, 1000)}..."
-    Currículo (Resumo/Skills): "${resumeText.substring(0, 1000)}..."
+    // Adiciona o Currículo (Texto ou Arquivo)
+    if (typeof resumeInput === 'string') {
+        parts.push({ text: `Currículo (Dados):\n${resumeInput.substring(0, 15000)}` });
+    } else {
+        parts.push({ inlineData: { mimeType: resumeInput.mimeType, data: resumeInput.data } });
+        parts.push({ text: "Analise o arquivo de currículo PDF fornecido acima." });
+    }
 
-    Forneça 3 pontos curtos de melhoria ou palavras-chave ausentes. Seja direto.`;
+    // Adiciona a descrição da vaga e as instruções
+    parts.push({ text: `
+    Vaga (Descrição):\n${jobDescription.substring(0, 5000)}
 
-    const response = await ai.models.generateContent({ model: MODEL, contents: prompt });
-    return response.text?.trim() || "Não foi possível analisar.";
+    Atue como um recrutador sênior e sistema ATS. Analise a aderência do currículo à vaga.
+    Seja crítico, mas construtivo.
+    
+    Retorne um JSON estrito com:
+    - score: numero inteiro de 0 a 100
+    - feedback: array de strings com 3 pontos principais de melhoria ou destaque positivo
+    - missingKeywords: array de strings com palavras-chave técnicas/soft-skills importantes que faltam
+    `});
+
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: { parts },
+      config: { 
+        responseMimeType: "application/json", 
+        responseSchema: { 
+          type: Type.OBJECT, 
+          properties: {
+            score: { type: Type.NUMBER },
+            feedback: { type: Type.ARRAY, items: { type: Type.STRING } },
+            missingKeywords: { type: Type.ARRAY, items: { type: Type.STRING } }
+          }
+        } 
+      }
+    });
+    return JSON.parse(response.text || "{}");
   } catch (error) {
-    return "Erro na análise.";
+    console.error(error);
+    return null;
   }
 };

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ResumeData, ThemeConfig, ResumeSettings, Skill } from '../../types';
-import { MapPin, Mail, Phone, Linkedin, Globe, Github, Twitter, ExternalLink, Dribbble } from 'lucide-react';
+import { MapPin, Mail, Phone, Linkedin, Globe, Github, Twitter, ExternalLink, Dribbble, Youtube, Facebook, Instagram, Hash, Star, Code, Heart, PenTool, Award } from 'lucide-react';
 import { format, parse, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -41,17 +41,34 @@ const SkillItem: React.FC<{ skill: Skill; settings: ResumeSettings; primary: str
   return <span className={`px-2 py-1 rounded text-xs font-medium inline-block border ${dark ? 'border-slate-700 text-slate-300' : 'bg-opacity-10'}`} style={{ backgroundColor: dark ? 'transparent' : `${accent}1a`, color: dark ? undefined : primary, borderColor: dark ? accent : 'transparent' }}>{skill.name}</span>;
 };
 
+// Helper para detectar ícone
+const getIconForUrl = (url: string, defaultIcon: any) => {
+    if (!url) return defaultIcon;
+    const lower = url.toLowerCase();
+    if (lower.includes('github')) return Github;
+    if (lower.includes('linkedin')) return Linkedin;
+    if (lower.includes('twitter') || lower.includes('x.com')) return Twitter;
+    if (lower.includes('dribbble')) return Dribbble;
+    if (lower.includes('behance')) return Hash; // Lucide doesn't have Behance, using Hash as fallback generic
+    if (lower.includes('youtube')) return Youtube;
+    if (lower.includes('facebook')) return Facebook;
+    if (lower.includes('instagram')) return Instagram;
+    return defaultIcon;
+};
+
 const ContactItem = ({ icon: Icon, text, link, primary, className }: { icon: any, text: string, link?: string, primary: string, className?: string }) => {
   if (!text) return null;
+  const DisplayIcon = link ? getIconForUrl(link, Icon) : Icon;
+  
   return (
     <div className={`flex items-center gap-1.5 mb-1 text-xs ${className}`}>
-      <Icon size={12} className="flex-shrink-0" style={{ color: primary }} />
+      <DisplayIcon size={12} className="flex-shrink-0" style={{ color: primary }} />
       {link ? <a href={link.startsWith('http') ? link : `https://${link}`} target="_blank" rel="noreferrer" className="hover:underline truncate">{text}</a> : <span className="truncate">{text}</span>}
     </div>
   );
 };
 
-const SectionTitle = ({ title, font, accent, primary, style = 'simple', dark }: { title: string, font: string, accent: string, primary: string, style?: string, dark?: boolean }) => {
+const SectionTitle = ({ title, font, accent, primary, style = 'simple', dark, gradient }: { title: string, font: string, accent: string, primary: string, style?: string, dark?: boolean, gradient?: string }) => {
   let classes = `text-sm font-bold uppercase tracking-wider mb-4 pb-1 ${font} break-after-avoid `;
   let inlineStyles: React.CSSProperties = { color: dark ? '#fff' : primary };
   
@@ -64,6 +81,11 @@ const SectionTitle = ({ title, font, accent, primary, style = 'simple', dark }: 
   } else if (style === 'left-bar') {
       classes += " pl-3 border-l-4";
       inlineStyles.borderColor = accent;
+  } else if (style === 'gradient' && gradient) {
+      inlineStyles.background = gradient;
+      inlineStyles.WebkitBackgroundClip = 'text';
+      inlineStyles.WebkitTextFillColor = 'transparent';
+      inlineStyles.borderBottom = `1px solid ${accent}40`; // Slight border
   } else {
       // Simple default
       inlineStyles.borderBottom = `1px solid ${dark ? '#333' : '#e2e8f0'}`;
@@ -76,16 +98,15 @@ const SectionTitle = ({ title, font, accent, primary, style = 'simple', dark }: 
 const DateDisplay = ({ date, formatStr }: { date: string, formatStr?: string }) => {
   if (!date) return null;
   try {
-     // Tenta parsear formatos comuns de input manual (yyyy-MM ou MM/yyyy)
      let parsedDate = new Date();
-     if (date.includes('-') && date.length === 7) { // 2023-01
+     if (date.includes('-') && date.length === 7) { 
          parsedDate = parse(date, 'yyyy-MM', new Date());
-     } else if (date.includes('/') && date.length === 7) { // 01/2023
+     } else if (date.includes('/') && date.length === 7) { 
          parsedDate = parse(date, 'MM/yyyy', new Date());
      } else if (date.length === 4) {
          return <span>{date}</span>;
      } else {
-         return <span>{date}</span>; // Fallback text
+         return <span>{date}</span>; 
      }
      
      if (!isValid(parsedDate)) return <span>{date}</span>;
@@ -94,7 +115,6 @@ const DateDisplay = ({ date, formatStr }: { date: string, formatStr?: string }) 
      if (formatStr === 'MM/yyyy') return <span>{format(parsedDate, 'MM/yyyy')}</span>;
      if (formatStr === 'full') return <span>{format(parsedDate, 'MMMM yyyy', { locale: ptBR })}</span>;
      
-     // Default 'MMM yyyy'
      return <span className="capitalize">{format(parsedDate, 'MMM yyyy', { locale: ptBR })}</span>;
   } catch (e) {
     return <span>{date}</span>;
@@ -105,7 +125,6 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
   const { colors, layout } = theme;
   const { settings } = data;
   
-  // Font Classes mapping
   const headerFontClass = settings.headerFont || theme.fonts?.header || 'font-sans';
   const bodyFontClass = settings.bodyFont || theme.fonts?.body || 'font-sans';
 
@@ -124,19 +143,29 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
   } as React.CSSProperties;
 
   const primaryColor = settings.primaryColor || colors.primary;
-  const isDarkTheme = theme.id === 'tech-dark'; // Ivy league black bg option
+  const isDarkTheme = theme.id === 'tech-dark'; 
 
-  // Helper to render content sections
+  const getCustomIcon = (id?: string) => {
+      switch(id) {
+          case 'star': return Star;
+          case 'globe': return Globe;
+          case 'code': return Code;
+          case 'heart': return Heart;
+          case 'pen': return PenTool;
+          case 'award': return Award;
+          default: return null;
+      }
+  };
+
   const renderSection = (type: string) => {
     if (!data.settings.visibleSections[type]) return null;
     
-    // Components mapping based on type
     switch(type) {
       case 'experience':
         if (data.experience.length === 0) return null;
         return (
           <div className="mb-6 group-section">
-            <SectionTitle title="Experiência" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} />
+            <SectionTitle title="Experiência" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
             <div className={`${theme.id === 'timeline-pro' ? 'border-l-2 border-slate-200 ml-2 pl-4 space-y-6' : 'space-y-4'}`}>
               {data.experience.map((exp, i) => (
                 <div key={exp.id} className={`break-inside-avoid relative ${settings.compactMode ? 'mb-2' : ''}`}>
@@ -156,7 +185,7 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
          if (data.education.length === 0) return null;
          return (
            <div className="mb-6 group-section">
-             <SectionTitle title="Educação" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} />
+             <SectionTitle title="Educação" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
              {data.education.map(edu => (
                <div key={edu.id} className="mb-3 break-inside-avoid">
                  <div className="flex justify-between font-bold"><span style={{color: isDarkTheme ? '#fff' : 'var(--text)'}}>{edu.school}</span> <span className="text-xs font-normal opacity-70"><DateDisplay date={edu.endDate} formatStr={settings.dateFormat}/></span></div>
@@ -169,7 +198,7 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
           if (data.skills.length === 0) return null;
           return (
             <div className="mb-6 group-section">
-              <SectionTitle title="Habilidades" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} />
+              <SectionTitle title="Habilidades" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
               <div className={`flex flex-wrap ${settings.skillStyle === 'tags' ? 'gap-2' : settings.skillStyle === 'hidden' ? 'block' : 'flex-col gap-1'}`}>
                 {data.skills.map(s => <SkillItem key={s.id} skill={s} settings={settings} primary={primaryColor} accent={colors.accent} dark={isDarkTheme} />)}
               </div>
@@ -179,7 +208,7 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
           if (data.projects.length === 0) return null;
           return (
              <div className="mb-6 group-section">
-               <SectionTitle title="Projetos" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} />
+               <SectionTitle title="Projetos" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
                {data.projects.map(p => (
                  <div key={p.id} className="mb-3 break-inside-avoid">
                     <div className="font-bold flex items-center gap-2" style={{color: isDarkTheme ? '#fff' : 'var(--text)'}}>{p.name} {p.url && <a href={p.url} className="text-blue-500"><ExternalLink size={10}/></a>}</div>
@@ -192,16 +221,21 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
          if (data.languages.length === 0) return null;
          return (
             <div className="mb-6 group-section">
-              <SectionTitle title="Idiomas" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} />
+              <SectionTitle title="Idiomas" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
               <div className="text-sm opacity-90">{data.languages.join(' • ')}</div>
             </div>
          );
       case 'custom':
          return (
            <>
-             {data.customSections.map(sec => (
+             {data.customSections.map(sec => {
+               const CustomIcon = getCustomIcon(sec.icon);
+               return (
                <div key={sec.id} className="mb-6 group-section">
-                 <SectionTitle title={sec.name} font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} />
+                 <div className="flex items-center gap-2 mb-4">
+                    {CustomIcon && <CustomIcon size={18} style={{color: colors.accent}} />}
+                    <SectionTitle title={sec.name} font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
+                 </div>
                  {sec.items.map(item => (
                    <div key={item.id} className="mb-2 break-inside-avoid">
                       <div className="font-bold">{item.title}</div>
@@ -210,7 +244,7 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
                    </div>
                  ))}
                </div>
-             ))}
+             )})}
            </>
          );
       default: return null;
@@ -227,8 +261,6 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
         <ContactItem icon={Globe} text={data.personalInfo.website} link={data.personalInfo.website} primary={primaryColor} />
      </div>
   );
-
-  // --- LAYOUT STRATEGIES ---
 
   const renderSingleColumn = () => (
     <div className={`p-${8 * settings.marginScale} max-w-3xl mx-auto h-full`}>
@@ -284,7 +316,7 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
           )}
           {data.settings.visibleSections.summary && (
              <div className="mb-8">
-                <SectionTitle title="Resumo" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle}/>
+                <SectionTitle title="Resumo" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} gradient={theme.gradient} />
                 <p className="text-sm leading-relaxed opacity-80">{data.personalInfo.summary}</p>
              </div>
           )}
@@ -295,7 +327,6 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
 
   const renderGridComplex = () => (
      <div className={`p-${8 * settings.marginScale} h-full bg-white relative`}>
-        {/* Swiss Style Header */}
         <div className="grid grid-cols-12 gap-4 mb-12 border-b-4 border-black pb-4">
            <div className="col-span-8">
               <h1 className={`text-6xl font-bold tracking-tighter leading-none mb-2 ${headerFontClass}`} style={{color: primaryColor}}>{data.personalInfo.fullName}</h1>
@@ -331,7 +362,6 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
 
   const renderGeometric = () => (
      <div className={`p-${8 * settings.marginScale} h-full relative overflow-hidden`} style={{backgroundColor: colors.bg}}>
-        {/* Background Shapes */}
         <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10 blur-3xl" style={{backgroundColor: colors.primary}}></div>
         <div className="absolute bottom-0 left-0 w-96 h-96 rounded-full opacity-10 blur-3xl" style={{backgroundColor: colors.accent}}></div>
         <div className="absolute top-20 left-10 w-20 h-20 rounded-lg rotate-12 opacity-5" style={{backgroundColor: colors.secondary}}></div>
@@ -365,15 +395,14 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
      </div>
   );
 
-  // Main Render Switch
   let Content = renderSingleColumn;
   if (layout === 'sidebar-left' || layout === 'sidebar-right') Content = renderSidebarLeft;
   if (layout === 'grid-complex') Content = renderGridComplex;
   if (theme.id === 'geometric-pop') Content = renderGeometric;
-  if (theme.id === 'tech-dark') Content = renderSingleColumn; // Uses IsDarkTheme prop
+  if (theme.id === 'tech-dark') Content = renderSingleColumn; 
 
   return (
-    <div className={`w-full h-full overflow-hidden`} style={{...style, backgroundColor: isDarkTheme ? '#0f172a' : '#fff'}}>
+    <div className={`w-full h-full overflow-hidden shadow-2xl ring-1 ring-slate-900/5 transition-shadow duration-500`} style={{...style, backgroundColor: isDarkTheme ? '#0f172a' : '#fff'}}>
         <Content />
         {settings.showQrCode && data.personalInfo.linkedin && (
            <div className="absolute top-4 right-4 print:block hidden">

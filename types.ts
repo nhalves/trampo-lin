@@ -72,6 +72,7 @@ export interface CustomSectionItem {
 export interface CustomSection {
   id: string;
   name: string;
+  icon?: string; // Novo: Ícone personalizado
   items: CustomSectionItem[];
 }
 
@@ -84,15 +85,15 @@ export interface Skill {
 export interface ResumeSettings {
   fontScale: number;
   spacingScale: number;
-  marginScale: number; // Novo: Margem da página
+  marginScale: number;
   primaryColor?: string;
   sectionOrder: string[];
   visibleSections: Record<string, boolean>;
   paperSize: 'a4' | 'letter';
-  dateFormat: 'MM/yyyy' | 'MMM yyyy' | 'yyyy' | 'full'; // Novo: Formatos de data
-  headerFont: string; // Novo: Fonte do título
-  bodyFont: string; // Novo: Fonte do corpo
-  headerStyle: 'simple' | 'underline' | 'box' | 'left-bar'; // Novo: Estilo visual dos headers
+  dateFormat: 'MM/yyyy' | 'MMM yyyy' | 'yyyy' | 'full';
+  headerFont: string;
+  bodyFont: string;
+  headerStyle: 'simple' | 'underline' | 'box' | 'left-bar' | 'gradient'; // Novo: Gradient
   skillStyle: 'tags' | 'bar' | 'dots' | 'hidden';
   showQrCode: boolean;
   compactMode: boolean;
@@ -146,11 +147,11 @@ export type ThemeId =
   | 'executive-blue'
   | 'creative-coral'
   | 'ats-clean'
-  | 'timeline-pro' // Novo
-  | 'swiss-grid'   // Novo
-  | 'tech-dark'    // Novo
-  | 'geometric-pop'// Novo
-  | 'studio-minimal'; // Novo
+  | 'timeline-pro'
+  | 'swiss-grid'
+  | 'tech-dark'
+  | 'geometric-pop'
+  | 'studio-minimal';
 
 export interface ThemeConfig {
   id: ThemeId;
@@ -168,4 +169,11 @@ export interface ThemeConfig {
     header?: string;
     body?: string;
   };
+  gradient?: string; // Novo
+}
+
+export interface AtsAnalysis {
+  score: number;
+  feedback: string[];
+  missingKeywords: string[];
 }

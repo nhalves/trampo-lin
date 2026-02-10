@@ -24,18 +24,24 @@ Um criador de currículos moderno, gratuito e open-source, construído com React
 - **Frontend:** React, TypeScript, Vite
 - **Estilização:** Tailwind CSS, Lucide React (Ícones)
 - **IA:** Google Gemini API (`@google/genai`)
-- **Utilitários:** `date-fns` (Datas), `gh-pages` (Deploy)
+- **Utilitários:** `date-fns` (Datas)
 
-## 🚀 Como usar (Deploy Automático)
+## 🚀 Como fazer Deploy (Netlify)
 
-Este projeto está configurado para ser implantado automaticamente no **GitHub Pages**.
+A maneira mais fácil de publicar este projeto é usando o **Netlify**.
 
-1. Faça um **Fork** ou clone este repositório.
-2. Vá nas **Settings** do repositório no GitHub -> **Secrets and variables** -> **Actions**.
-3. Adicione um **New repository secret** chamado `API_KEY` com sua chave do Google Gemini.
+1. Faça um **Fork** ou clone este repositório para o seu GitHub.
+2. Acesse [Netlify](https://www.netlify.com/) e faça login.
+3. Clique em **"Add new site"** > **"Import from an existing project"**.
+4. Selecione **GitHub** e escolha o repositório do `trampo-lin`.
+5. As configurações de build devem ser preenchidas automaticamente:
+   - **Build command:** `npm run build`
+   - **Publish directory:** `dist`
+6. **IMPORTANTE:** Clique em **"Site settings"** > **"Environment variables"** e adicione:
+   - Key: `API_KEY`
+   - Value: `Sua_Chave_Google_Gemini`
    - [Obter chave gratuita aqui](https://aistudio.google.com/app/apikey)
-4. Vá na aba **Actions** e verifique se o workflow de deploy foi executado com sucesso.
-5. Acesse seu site em: `https://SEU_USUARIO.github.io/NOME_DO_REPO/`
+7. Clique em **Deploy site**.
 
 ## 💻 Como rodar localmente
 

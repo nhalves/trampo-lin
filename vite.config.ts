@@ -2,16 +2,15 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
-  // Carrega variáveis de ambiente (como API_KEY)
+  // Carrega variáveis de ambiente locais (.env)
   const env = loadEnv(mode, (process as any).cwd(), '');
   
   return {
     plugins: [react()],
-    // Base './' é crucial para GitHub Pages (caminhos relativos)
-    base: './',
+    // No Netlify, usamos o caminho absoluto padrão, então removemos o base: './'
     define: {
-      // Garante que process.env.API_KEY funcione no browser
-      'process.env.API_KEY': JSON.stringify(env.API_KEY)
+      // Garante que a API_KEY seja injetada, priorizando o ambiente do sistema (Netlify) e depois o .env local
+      'process.env.API_KEY': JSON.stringify(process.env.API_KEY || env.API_KEY)
     },
     build: {
       outDir: 'dist',

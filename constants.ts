@@ -108,7 +108,7 @@ export const THEMES: ThemeConfig[] = [
     name: 'Timeline Pro',
     description: 'Conecta suas experiências com uma linha do tempo elegante.',
     colors: { primary: '#2563eb', secondary: '#64748b', text: '#334155', bg: '#ffffff', accent: '#3b82f6' },
-    layout: 'sidebar-left' // Usará lógica customizada no Preview
+    layout: 'sidebar-left'
   },
   {
     id: 'swiss-grid',
@@ -122,7 +122,8 @@ export const THEMES: ThemeConfig[] = [
     name: 'Geometric Pop',
     description: 'Formas sutis ao fundo para um visual criativo e moderno.',
     colors: { primary: '#4f46e5', secondary: '#818cf8', text: '#312e81', bg: '#eef2ff', accent: '#6366f1' },
-    layout: 'sidebar-right'
+    layout: 'sidebar-right',
+    gradient: 'linear-gradient(135deg, #4f46e5 0%, #818cf8 100%)'
   },
   {
     id: 'studio-minimal',
@@ -166,7 +167,8 @@ export const THEMES: ThemeConfig[] = [
     name: 'Executivo',
     description: 'Banner no topo. Autoridade e confiança.',
     colors: { primary: '#1e3a8a', secondary: '#60a5fa', text: '#1e293b', bg: '#eff6ff', accent: '#2563eb' },
-    layout: 'banner'
+    layout: 'banner',
+    gradient: 'linear-gradient(to right, #1e3a8a, #2563eb)'
   },
   {
     id: 'creative-coral',
@@ -193,4 +195,12 @@ export const AVAILABLE_FONTS = [
   { name: 'Open Sans', value: 'font-open' },
   { name: 'Montserrat', value: 'font-montserrat' },
   { name: 'Raleway', value: 'font-raleway' },
+];
+
+export const FONT_PAIRINGS = [
+  { name: 'Moderno (Inter + Inter)', header: 'font-sans', body: 'font-sans' },
+  { name: 'Editorial (Serifa + Sans)', header: 'font-serif', body: 'font-sans' },
+  { name: 'Técnico (Mono + Sans)', header: 'font-mono', body: 'font-sans' },
+  { name: 'Elegante (Raleway + Lato)', header: 'font-raleway', body: 'font-lato' },
+  { name: 'Impacto (Poppins + Open Sans)', header: 'font-display', body: 'font-open' },
 ];
