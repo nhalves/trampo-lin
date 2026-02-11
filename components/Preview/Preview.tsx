@@ -7,13 +7,11 @@ interface PreviewProps {
   data: ResumeData;
   theme: ThemeConfig;
   mode?: 'resume' | 'cover';
-  zoom: number;
 }
 
 const MarkdownText = ({ text }: { text: string }) => {
     if (!text) return null;
     
-    // Simple parser for **bold**, *italic*, and newlines
     const lines = text.split('\n');
     return (
         <>
@@ -36,13 +34,13 @@ const MarkdownText = ({ text }: { text: string }) => {
 
 const SkillItem: React.FC<{ skill: Skill; settings: ResumeSettings; primary: string; accent: string; dark?: boolean }> = ({ skill, settings, primary, accent, dark }) => {
   if (settings.skillStyle === 'hidden') {
-    return <span className={`text-sm font-medium mr-3 mb-1 inline-block ${dark ? 'text-slate-300' : 'text-[var(--text)]'}`}>• {skill.name}</span>;
+    return <span className={`text-sm font-medium mr-3 mb-1 inline-block print:text-black ${dark ? 'text-slate-300' : 'text-[var(--text)]'}`}>• {skill.name}</span>;
   }
   if (settings.skillStyle === 'bar') {
     return (
       <div className="mb-2 w-full break-inside-avoid">
-        <div className={`flex justify-between text-xs mb-0.5 ${dark ? 'text-slate-300' : 'text-slate-700'}`}><span>{skill.name}</span></div>
-        <div className={`h-1.5 w-full rounded-full overflow-hidden ${dark ? 'bg-slate-700' : 'bg-slate-200'} print:border print:border-slate-200`}>
+        <div className={`flex justify-between text-xs mb-0.5 print:text-black ${dark ? 'text-slate-300' : 'text-slate-700'}`}><span>{skill.name}</span></div>
+        <div className={`h-1.5 w-full rounded-full overflow-hidden print:border print:border-slate-300 ${dark ? 'bg-slate-700' : 'bg-slate-200'}`}>
           <div className="h-full print:print-color-adjust-exact" style={{ width: `${skill.level * 20}%`, backgroundColor: primary }}></div>
         </div>
       </div>
@@ -50,7 +48,7 @@ const SkillItem: React.FC<{ skill: Skill; settings: ResumeSettings; primary: str
   }
   if (settings.skillStyle === 'dots') {
       return (
-        <div className={`flex justify-between items-center mb-1 text-xs ${dark ? 'text-slate-300' : 'text-slate-700'} break-inside-avoid`}>
+        <div className={`flex justify-between items-center mb-1 text-xs print:text-black ${dark ? 'text-slate-300' : 'text-slate-700'} break-inside-avoid`}>
           <span>{skill.name}</span>
           <div className="flex gap-1">
             {[1,2,3,4,5].map(i => <div key={i} className={`w-2 h-2 rounded-full print:print-color-adjust-exact ${i <= skill.level ? '' : (dark ? 'bg-slate-700' : 'bg-slate-200')}`} style={{ backgroundColor: i <= skill.level ? accent : undefined }}></div>)}
@@ -66,14 +64,14 @@ const SkillItem: React.FC<{ skill: Skill; settings: ResumeSettings; primary: str
                       <path className={`${dark ? 'text-slate-700' : 'text-slate-200'}`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
                       <path className="print:print-color-adjust-exact" style={{ color: primary }} strokeDasharray={`${skill.level * 20}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
                   </svg>
-                  <span className="absolute text-[10px] font-bold">{skill.level}</span>
+                  <span className="absolute text-[10px] font-bold print:text-black">{skill.level}</span>
               </div>
-              <span className={`text-[10px] leading-tight ${dark ? 'text-slate-300' : 'text-slate-700'}`}>{skill.name}</span>
+              <span className={`text-[10px] leading-tight print:text-black ${dark ? 'text-slate-300' : 'text-slate-700'}`}>{skill.name}</span>
           </div>
       );
   }
   // Tag Style
-  return <span className={`px-2 py-1 rounded text-xs font-medium inline-block border break-inside-avoid print:print-color-adjust-exact ${dark ? 'border-slate-700 text-slate-300' : 'bg-opacity-10'}`} style={{ backgroundColor: dark ? 'transparent' : `${accent}1a`, color: dark ? undefined : primary, borderColor: dark ? accent : 'transparent' }}>{skill.name}</span>;
+  return <span className={`px-2 py-1 rounded text-xs font-medium inline-block border break-inside-avoid print:print-color-adjust-exact print:text-black print:border-slate-300 ${dark ? 'border-slate-700 text-slate-300' : 'bg-opacity-10'}`} style={{ backgroundColor: dark ? 'transparent' : `${accent}1a`, color: dark ? undefined : primary, borderColor: dark ? accent : 'transparent' }}>{skill.name}</span>;
 };
 
 const getIconForUrl = (url: string, defaultIcon: any) => {
@@ -106,17 +104,19 @@ const ContactItem = ({ icon: Icon, text, link, primary, className, privacyMode }
     <div className={`flex items-center gap-1.5 mb-1 text-xs ${className} break-inside-avoid`}>
       <DisplayIcon size={12} className="flex-shrink-0 print:text-black" style={{ color: primary }} />
       {safeLink ? (
-          <a href={safeLink} target="_blank" rel="noreferrer" className={`hover:underline truncate print:text-black print:no-underline ${privacyMode ? 'blur-[3px] select-none' : ''}`}>{text}</a>
+          <a href={safeLink} target="_blank" rel="noreferrer" className={`hover:underline truncate print:text-black print:no-underline ${privacyMode ? 'blur-[3px] select-none print:blur-none' : ''}`}>{text}</a>
       ) : (
-          <span className={`truncate ${privacyMode ? 'blur-[3px] select-none' : ''}`}>{text}</span>
+          <span className={`truncate print:text-black ${privacyMode ? 'blur-[3px] select-none print:blur-none' : ''}`}>{text}</span>
       )}
     </div>
   );
 };
 
 const SectionTitle = ({ title, font, accent, primary, style = 'simple', dark, gradient }: { title: string, font: string, accent: string, primary: string, style?: string, dark?: boolean, gradient?: string }) => {
-  let classes = `text-sm font-bold uppercase tracking-wider mb-4 pb-1 ${font} break-after-avoid break-inside-avoid `;
+  let classes = `text-sm font-bold uppercase tracking-wider mb-4 pb-1 ${font} break-after-avoid break-inside-avoid print:text-black `;
   let inlineStyles: React.CSSProperties = { color: dark ? '#fff' : primary };
+  
+  // No print, forçamos cores legíveis
   
   if (style === 'underline') {
       inlineStyles.borderBottom = `2px solid ${accent}`;
@@ -145,6 +145,8 @@ const DateDisplay = ({ date, formatStr }: { date: string, formatStr?: string }) 
   let parsedDate: Date | null = null;
   
   try {
+     if (typeof date !== 'string') return null;
+
      if (date.match(/^\d{4}-\d{2}$/)) { 
          const [y, m] = date.split('-').map(Number);
          parsedDate = new Date(y, m - 1);
@@ -177,13 +179,14 @@ const DateDisplay = ({ date, formatStr }: { date: string, formatStr?: string }) 
   }
 };
 
-export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', zoom }) => {
+export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume' }) => {
   const { colors, layout } = theme;
   const { settings } = data;
   
   const headerFontClass = settings.headerFont || theme.fonts?.header || 'font-sans';
   const bodyFontClass = settings.bodyFont || theme.fonts?.body || 'font-sans';
 
+  // Base styles for the resume paper
   const style = {
     '--primary': settings.primaryColor || colors.primary,
     '--secondary': colors.secondary,
@@ -191,11 +194,9 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
     '--bg': colors.bg,
     '--accent': colors.accent,
     fontSize: `${settings.fontScale * 0.875}rem`,
-    lineHeight: settings.lineHeight || settings.spacingScale * 1.5, // Updated
-    transform: `scale(${zoom})`,
-    transformOrigin: 'top left',
-    width: `calc(100% / ${zoom})`,
-    height: `calc(100% / ${zoom})`,
+    lineHeight: settings.lineHeight || settings.spacingScale * 1.5,
+    backgroundColor: theme.id === 'tech-dark' ? '#0f172a' : '#fff',
+    color: theme.id === 'tech-dark' ? '#cbd5e1' : colors.text,
   } as React.CSSProperties;
 
   const primaryColor = settings.primaryColor || colors.primary;
@@ -227,15 +228,15 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
                 <div key={exp.id} className={`break-inside-avoid relative ${settings.compactMode ? 'mb-2' : ''}`}>
                    {theme.id === 'timeline-pro' && <div className="absolute -left-[21px] top-1.5 w-3 h-3 rounded-full border-2 border-white print:print-color-adjust-exact" style={{backgroundColor: primaryColor}}></div>}
                    <div className="flex justify-between items-baseline mb-0.5">
-                      <h4 className={`font-bold text-lg ${bodyFontClass}`} style={{color: isDarkTheme ? '#fff' : 'var(--text)'}}>{exp.role}</h4>
+                      <h4 className={`font-bold text-lg ${bodyFontClass} print:text-black`} style={{color: isDarkTheme ? '#fff' : 'var(--text)'}}>{exp.role}</h4>
                       {settings.showDuration && (
-                          <span className="text-xs opacity-70 whitespace-nowrap">
+                          <span className="text-xs opacity-70 whitespace-nowrap print:text-black">
                               <DateDisplay date={exp.startDate} formatStr={settings.dateFormat}/> – {exp.current ? 'Atualmente' : <DateDisplay date={exp.endDate} formatStr={settings.dateFormat}/>}
                           </span>
                       )}
                    </div>
-                   <div className="text-sm font-semibold mb-2" style={{color: colors.accent}}>{exp.company} {exp.location && `• ${exp.location}`}</div>
-                   <div className={`text-sm opacity-90 text-justify ${bodyFontClass}`} style={{color: isDarkTheme ? '#ccc' : 'var(--text)'}}>
+                   <div className="text-sm font-semibold mb-2 print:text-black" style={{color: colors.accent}}>{exp.company} {exp.location && `• ${exp.location}`}</div>
+                   <div className={`text-sm opacity-90 text-justify ${bodyFontClass} print:text-black`} style={{color: isDarkTheme ? '#ccc' : 'var(--text)'}}>
                        <MarkdownText text={exp.description} />
                    </div>
                 </div>
@@ -250,8 +251,8 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
              <SectionTitle title="Educação" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
              {data.education.map(edu => (
                <div key={edu.id} className="mb-3 break-inside-avoid">
-                 <div className="flex justify-between font-bold"><span style={{color: isDarkTheme ? '#fff' : 'var(--text)'}}>{edu.school}</span> <span className="text-xs font-normal opacity-70"><DateDisplay date={edu.endDate} formatStr={settings.dateFormat}/></span></div>
-                 <div className="text-sm" style={{color: colors.accent}}>{edu.degree}</div>
+                 <div className="flex justify-between font-bold print:text-black"><span style={{color: isDarkTheme ? '#fff' : 'var(--text)'}}>{edu.school}</span> <span className="text-xs font-normal opacity-70"><DateDisplay date={edu.endDate} formatStr={settings.dateFormat}/></span></div>
+                 <div className="text-sm print:text-black" style={{color: colors.accent}}>{edu.degree}</div>
                </div>
              ))}
            </div>
@@ -273,11 +274,11 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
                <SectionTitle title="Projetos" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
                {data.projects.map(p => (
                  <div key={p.id} className="mb-3 break-inside-avoid">
-                    <div className="font-bold flex items-center gap-2" style={{color: isDarkTheme ? '#fff' : 'var(--text)'}}>
+                    <div className="font-bold flex items-center gap-2 print:text-black" style={{color: isDarkTheme ? '#fff' : 'var(--text)'}}>
                         {p.name} 
                         {p.url && <a href={sanitizeLink(p.url)} target="_blank" rel="noreferrer" className="text-blue-500 print:text-black print:no-underline"><ExternalLink size={10}/></a>}
                     </div>
-                    <div className="text-sm opacity-90"><MarkdownText text={p.description} /></div>
+                    <div className="text-sm opacity-90 print:text-black"><MarkdownText text={p.description} /></div>
                  </div>
                ))}
              </div>
@@ -287,7 +288,7 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
          return (
             <div className="mb-6 group-section break-inside-avoid">
               <SectionTitle title="Idiomas" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
-              <div className="text-sm opacity-90">{data.languages.join(' • ')}</div>
+              <div className="text-sm opacity-90 print:text-black">{data.languages.join(' • ')}</div>
             </div>
          );
       case 'volunteer':
@@ -297,8 +298,8 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
                  <SectionTitle title="Voluntariado" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
                  {data.volunteer.map(vol => (
                      <div key={vol.id} className="mb-3 break-inside-avoid">
-                         <div className="flex justify-between font-bold"><span style={{color: isDarkTheme ? '#fff' : 'var(--text)'}}>{vol.role}</span> <span className="text-xs font-normal opacity-70">{vol.startDate}</span></div>
-                         <div className="text-sm" style={{color: colors.accent}}>{vol.organization}</div>
+                         <div className="flex justify-between font-bold print:text-black"><span style={{color: isDarkTheme ? '#fff' : 'var(--text)'}}>{vol.role}</span> <span className="text-xs font-normal opacity-70">{vol.startDate}</span></div>
+                         <div className="text-sm print:text-black" style={{color: colors.accent}}>{vol.organization}</div>
                      </div>
                  ))}
              </div>
@@ -310,8 +311,8 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
                  <SectionTitle title="Prêmios" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
                  {data.awards.map(aw => (
                      <div key={aw.id} className="mb-2 break-inside-avoid">
-                         <div className="font-bold">{aw.title}</div>
-                         <div className="text-xs opacity-70">{aw.issuer} • {aw.date}</div>
+                         <div className="font-bold print:text-black">{aw.title}</div>
+                         <div className="text-xs opacity-70 print:text-black">{aw.issuer} • {aw.date}</div>
                      </div>
                  ))}
              </div>
@@ -323,9 +324,9 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
                  <SectionTitle title="Referências" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
                  {data.references.map(ref => (
                      <div key={ref.id} className="mb-2 break-inside-avoid">
-                         <div className="font-bold">{ref.name}</div>
-                         <div className="text-xs opacity-80">{ref.role} @ {ref.company}</div>
-                         <div className="text-xs opacity-60">{ref.contact}</div>
+                         <div className="font-bold print:text-black">{ref.name}</div>
+                         <div className="text-xs opacity-80 print:text-black">{ref.role} @ {ref.company}</div>
+                         <div className="text-xs opacity-60 print:text-black">{ref.contact}</div>
                      </div>
                  ))}
              </div>
@@ -345,9 +346,9 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
                  </div>
                  {sec.items.map(item => (
                    <div key={item.id} className="mb-2 break-inside-avoid">
-                      <div className="font-bold">{item.title}</div>
-                      <div className="text-xs opacity-70 mb-1">{item.subtitle}</div>
-                      <div className="text-sm opacity-90 whitespace-pre-line"><MarkdownText text={item.description} /></div>
+                      <div className="font-bold print:text-black">{item.title}</div>
+                      <div className="text-xs opacity-70 mb-1 print:text-black">{item.subtitle}</div>
+                      <div className="text-sm opacity-90 whitespace-pre-line print:text-black"><MarkdownText text={item.description} /></div>
                    </div>
                  ))}
                </div>
@@ -391,13 +392,13 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
     <div className={`p-${8 * settings.marginScale} max-w-3xl mx-auto h-full`}>
        <div className={`flex flex-col mb-8 ${getAlignmentClasses()}`}>
           {data.personalInfo.photoUrl && <img src={data.personalInfo.photoUrl} className={`w-24 h-24 mb-4 object-cover border-4 border-white shadow-sm ${getPhotoClasses()}`}/>}
-          <h1 className={`text-4xl font-bold mb-2 uppercase tracking-tight ${headerFontClass}`} style={{color: primaryColor}}>{data.personalInfo.fullName}</h1>
-          <p className={`text-xl mb-4 ${bodyFontClass}`} style={{color: colors.accent}}>{data.personalInfo.jobTitle}</p>
+          <h1 className={`text-4xl font-bold mb-2 uppercase tracking-tight ${headerFontClass} print:text-black`} style={{color: primaryColor}}>{data.personalInfo.fullName}</h1>
+          <p className={`text-xl mb-4 ${bodyFontClass} print:text-black`} style={{color: colors.accent}}>{data.personalInfo.jobTitle}</p>
           <ContactList />
        </div>
        {data.settings.visibleSections.summary && data.personalInfo.summary && (
          <div className={`mb-8 ${settings.headerAlignment === 'center' ? 'text-center px-8' : ''}`}>
-            <div className={`text-sm leading-relaxed opacity-80 ${bodyFontClass}`}><MarkdownText text={data.personalInfo.summary} /></div>
+            <div className={`text-sm leading-relaxed opacity-80 ${bodyFontClass} print:text-black`}><MarkdownText text={data.personalInfo.summary} /></div>
          </div>
        )}
        {data.settings.sectionOrder.map(id => renderSection(id))}
@@ -436,14 +437,14 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
        <div className={`flex-1 p-${8 * settings.marginScale} bg-white`}>
           {theme.id === 'timeline-pro' && (
              <div className="mb-8 border-b pb-4">
-                <h1 className={`text-4xl font-bold mb-1 ${headerFontClass}`} style={{color: primaryColor}}>{data.personalInfo.fullName}</h1>
-                <p className="text-xl opacity-70">{data.personalInfo.jobTitle}</p>
+                <h1 className={`text-4xl font-bold mb-1 ${headerFontClass} print:text-black`} style={{color: primaryColor}}>{data.personalInfo.fullName}</h1>
+                <p className="text-xl opacity-70 print:text-black">{data.personalInfo.jobTitle}</p>
              </div>
           )}
           {data.settings.visibleSections.summary && data.personalInfo.summary && (
              <div className="mb-8">
                 <SectionTitle title="Resumo" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} gradient={theme.gradient} />
-                <div className="text-sm leading-relaxed opacity-80"><MarkdownText text={data.personalInfo.summary} /></div>
+                <div className="text-sm leading-relaxed opacity-80 print:text-black"><MarkdownText text={data.personalInfo.summary} /></div>
              </div>
           )}
           {data.settings.sectionOrder.filter(id => !['skills','languages','awards'].includes(id)).map(id => renderSection(id))}
@@ -455,8 +456,8 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
      <div className={`p-${8 * settings.marginScale} h-full bg-white relative`}>
         <div className="grid grid-cols-12 gap-4 mb-12 border-b-4 border-black pb-4">
            <div className="col-span-8">
-              <h1 className={`text-6xl font-bold tracking-tighter leading-none mb-2 ${headerFontClass}`} style={{color: primaryColor}}>{data.personalInfo.fullName}</h1>
-              <p className="text-2xl font-light tracking-wide">{data.personalInfo.jobTitle}</p>
+              <h1 className={`text-6xl font-bold tracking-tighter leading-none mb-2 ${headerFontClass} print:text-black`} style={{color: primaryColor}}>{data.personalInfo.fullName}</h1>
+              <p className="text-2xl font-light tracking-wide print:text-black">{data.personalInfo.jobTitle}</p>
            </div>
            <div className="col-span-4 text-right flex flex-col items-end justify-end">
               <ContactList vertical className="items-end" />
@@ -467,8 +468,8 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
            <div className="col-span-4">
               {data.settings.visibleSections.summary && data.personalInfo.summary && (
                  <div className="mb-8">
-                    <h3 className="font-bold text-sm uppercase mb-2 border-t-2 border-black pt-1">Sobre</h3>
-                    <div className="text-sm leading-relaxed"><MarkdownText text={data.personalInfo.summary} /></div>
+                    <h3 className="font-bold text-sm uppercase mb-2 border-t-2 border-black pt-1 print:text-black">Sobre</h3>
+                    <div className="text-sm leading-relaxed print:text-black"><MarkdownText text={data.personalInfo.summary} /></div>
                  </div>
               )}
               {renderSection('skills')}
@@ -494,7 +495,7 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
 
         <div className="relative z-10 flex flex-col items-center mb-10">
            {data.personalInfo.photoUrl && <img src={data.personalInfo.photoUrl} className={`w-28 h-28 shadow-lg mb-4 object-cover ${getPhotoClasses()}`}/>}
-           <h1 className={`text-4xl font-bold mb-1 ${headerFontClass}`}>{data.personalInfo.fullName}</h1>
+           <h1 className={`text-4xl font-bold mb-1 ${headerFontClass} print:text-black`}>{data.personalInfo.fullName}</h1>
            <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-white shadow-sm print:border" style={{color: colors.accent}}>{data.personalInfo.jobTitle}</span>
            <div className="mt-4 p-3 bg-white/50 backdrop-blur-sm rounded-xl shadow-sm border border-white print:border-slate-200">
               <ContactList />
@@ -509,8 +510,8 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
            <div className="col-span-2 md:col-span-1 space-y-2">
               {data.settings.visibleSections.summary && data.personalInfo.summary && (
                  <div className="mb-6 p-4 bg-white rounded-xl shadow-sm border border-slate-100 print:border-slate-200 break-inside-avoid">
-                    <h3 className="font-bold text-sm uppercase mb-2" style={{color: colors.primary}}>Resumo</h3>
-                    <p className="text-sm opacity-80"><MarkdownText text={data.personalInfo.summary} /></p>
+                    <h3 className="font-bold text-sm uppercase mb-2 print:text-black" style={{color: colors.primary}}>Resumo</h3>
+                    <p className="text-sm opacity-80 print:text-black"><MarkdownText text={data.personalInfo.summary} /></p>
                  </div>
               )}
               {renderSection('education')}
@@ -549,7 +550,7 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
   if (theme.id === 'tech-dark') Content = renderSingleColumn; 
 
   return (
-    <div className={`w-full h-full overflow-hidden shadow-2xl ring-1 ring-slate-900/5 transition-shadow duration-500 bg-white relative ${settings.grayscale ? 'grayscale' : ''}`} style={{...style, backgroundColor: isDarkTheme ? '#0f172a' : '#fff'}}>
+    <div className={`w-full h-full min-h-full print:h-auto overflow-hidden print:overflow-visible bg-white relative print:shadow-none ${settings.grayscale ? 'grayscale' : ''}`} style={style}>
         {/* Page Guide Overlay */}
         <div className="absolute top-[1122px] left-0 w-full border-b-2 border-dashed border-red-300 opacity-50 z-50 pointer-events-none print:hidden flex items-center justify-center">
             <span className="bg-red-100 text-red-500 text-[10px] px-1">Fim da Página 1 (A4)</span>

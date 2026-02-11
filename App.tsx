@@ -152,6 +152,29 @@ const App: React.FC = () => {
 
   return (
     <div className="h-screen bg-slate-100 dark:bg-slate-950 flex flex-col font-sans text-slate-800 dark:text-slate-200 overflow-hidden selection:bg-trampo-500/30">
+      
+      {/* Styles for accurate printing */}
+      <style>{`
+        @media print {
+          @page { margin: 0; size: auto; }
+          body * { visibility: hidden; }
+          #resume-paper, #resume-paper * { visibility: visible; }
+          #resume-paper {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100% !important;
+            height: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            transform: none !important;
+            box-shadow: none !important;
+          }
+          /* Ensure backgrounds print */
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+      `}</style>
+
       {/* Navbar */}
       <nav className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 lg:px-6 shadow-sm z-50 print:hidden flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -220,7 +243,7 @@ const App: React.FC = () => {
           {/* Background Grid Pattern */}
           <div className="absolute inset-0 z-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
 
-          <div className="w-full h-full overflow-auto flex items-start justify-center p-4 md:p-12 custom-scrollbar relative z-10 pb-24">
+          <div className="w-full h-full overflow-auto flex items-start justify-center p-4 md:p-12 custom-scrollbar relative z-10 pb-24 print:p-0 print:pb-0">
               {/* Theme Selector Modal (Existing) */}
               {showThemeSelector && (
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 z-50 animate-in slide-in-from-top-4 duration-300 w-[95%] max-w-4xl">
@@ -305,8 +328,17 @@ const App: React.FC = () => {
               )}
 
               {/* Resume Paper Container */}
-              <div ref={printRef} className={`relative flex-shrink-0 transition-transform duration-300 print:scale-100 print:w-full print:h-full ${resumeData.settings.paperSize === 'letter' ? 'w-[216mm] min-h-[279mm]' : 'w-[210mm] min-h-[297mm]'}`}>
-                <Preview data={resumeData} theme={THEMES.find(t => t.id === activeThemeId) || THEMES[0]} mode={previewMode} zoom={zoom} />
+              <div 
+                id="resume-paper"
+                ref={printRef} 
+                className={`relative flex-shrink-0 bg-white shadow-2xl transition-transform duration-200 origin-top`}
+                style={{
+                    width: resumeData.settings.paperSize === 'letter' ? '215.9mm' : '210mm',
+                    minHeight: resumeData.settings.paperSize === 'letter' ? '279.4mm' : '297mm',
+                    transform: `scale(${zoom})`,
+                }}
+              >
+                <Preview data={resumeData} theme={THEMES.find(t => t.id === activeThemeId) || THEMES[0]} mode={previewMode} />
               </div>
           </div>
 
