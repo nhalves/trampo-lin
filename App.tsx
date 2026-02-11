@@ -153,25 +153,60 @@ const App: React.FC = () => {
   return (
     <div className="h-screen bg-slate-100 dark:bg-slate-950 flex flex-col font-sans text-slate-800 dark:text-slate-200 overflow-hidden selection:bg-trampo-500/30">
       
-      {/* Styles for accurate printing */}
+      {/* 
+         CRITICAL: Global Print Styles 
+         This resets the app layout during print to ensure only the resume paper is visible and correctly sized.
+      */}
       <style>{`
         @media print {
           @page { margin: 0; size: auto; }
-          body * { visibility: hidden; }
-          #resume-paper, #resume-paper * { visibility: visible; }
+          
+          /* 1. Reset Body and Root */
+          body, #root, .h-screen, main {
+            background-color: white !important;
+            height: auto !important;
+            min-height: auto !important;
+            overflow: visible !important;
+            display: block !important;
+            position: static !important;
+          }
+
+          /* 2. Hide User Interface Elements */
+          nav, 
+          .print\\:hidden,
+          button, 
+          .preview-controls,
+          .theme-selector-modal,
+          .ai-settings-modal {
+            display: none !important;
+          }
+
+          /* 3. Force Resume Paper Visibility and Positioning */
           #resume-paper {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100% !important;
-            height: 100% !important;
+            display: block !important;
+            visibility: visible !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
             margin: 0 !important;
             padding: 0 !important;
-            transform: none !important;
+            transform: none !important; /* Disables the Zoom scale */
             box-shadow: none !important;
+            width: 210mm !important; /* A4 Width */
+            z-index: 9999 !important;
+            background-color: white !important;
           }
-          /* Ensure backgrounds print */
-          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          
+          /* Letter size adjustment if needed */
+          #resume-paper[data-size="letter"] {
+             width: 215.9mm !important;
+          }
+
+          /* 4. Color Correction for Print (Override Dark Mode) */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
         }
       `}</style>
 
@@ -231,22 +266,22 @@ const App: React.FC = () => {
       </nav>
 
       {/* Main Layout */}
-      <main className="flex-1 flex overflow-hidden relative">
+      <main className="flex-1 flex overflow-hidden relative print:overflow-visible print:block print:h-auto">
         {/* Editor Sidebar */}
         <div className={`w-full md:w-[480px] lg:w-[520px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 h-full overflow-hidden print:hidden z-10 flex-shrink-0 shadow-xl transition-transform duration-300 absolute md:relative ${showMobilePreview ? '-translate-x-full md:translate-x-0' : 'translate-x-0'}`}>
             <Editor data={resumeData} onChange={setResumeData} onShowToast={setToastMessage} />
         </div>
 
         {/* Preview Area */}
-        <div className={`flex-1 bg-slate-100/50 dark:bg-slate-950 overflow-hidden relative flex flex-col items-center justify-center print:p-0 print:bg-white print:overflow-visible w-full absolute md:relative h-full transition-transform duration-300 ${showMobilePreview ? 'translate-x-0 z-20 bg-white' : 'translate-x-full md:translate-x-0'}`}>
+        <div className={`flex-1 bg-slate-100/50 dark:bg-slate-950 overflow-hidden relative flex flex-col items-center justify-center print:bg-white print:overflow-visible print:block print:h-auto print:static w-full absolute md:relative h-full transition-transform duration-300 ${showMobilePreview ? 'translate-x-0 z-20 bg-white' : 'translate-x-full md:translate-x-0'}`}>
           
-          {/* Background Grid Pattern */}
-          <div className="absolute inset-0 z-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
+          {/* Background Grid Pattern - Hidden on print */}
+          <div className="absolute inset-0 z-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none print:hidden" style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
 
-          <div className="w-full h-full overflow-auto flex items-start justify-center p-4 md:p-12 custom-scrollbar relative z-10 pb-24 print:p-0 print:pb-0">
+          <div className="w-full h-full overflow-auto flex items-start justify-center p-4 md:p-12 custom-scrollbar relative z-10 pb-24 print:p-0 print:pb-0 print:overflow-visible print:block print:h-auto">
               {/* Theme Selector Modal (Existing) */}
               {showThemeSelector && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 z-50 animate-in slide-in-from-top-4 duration-300 w-[95%] max-w-4xl">
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 z-50 animate-in slide-in-from-top-4 duration-300 w-[95%] max-w-4xl theme-selector-modal">
                    <div className="flex justify-between items-center mb-6">
                       <div>
                         <h3 className="font-bold text-lg dark:text-white">Galeria de Temas</h3>
@@ -271,7 +306,7 @@ const App: React.FC = () => {
 
               {/* AI Settings Modal (New) */}
               {showAISettings && (
-                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200 ai-settings-modal">
                     <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-800 p-6">
                        <div className="flex justify-between items-center mb-6">
                           <h3 className="font-bold text-lg flex items-center gap-2 dark:text-white"><Bot size={20}/> Configuração de IA</h3>
@@ -331,6 +366,7 @@ const App: React.FC = () => {
               <div 
                 id="resume-paper"
                 ref={printRef} 
+                data-size={resumeData.settings.paperSize}
                 className={`relative flex-shrink-0 bg-white shadow-2xl transition-transform duration-200 origin-top`}
                 style={{
                     width: resumeData.settings.paperSize === 'letter' ? '215.9mm' : '210mm',
@@ -343,7 +379,7 @@ const App: React.FC = () => {
           </div>
 
           {/* Floating Controls */}
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md p-2 rounded-2xl shadow-xl border border-white/20 dark:border-slate-700/50 print:hidden z-40">
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md p-2 rounded-2xl shadow-xl border border-white/20 dark:border-slate-700/50 print:hidden z-40 preview-controls">
              <button onClick={handleTxtExport} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-colors" title="Exportar TXT"><FileType size={18}/></button>
              <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
              <button onClick={() => setZoom(z => Math.max(z - 0.1, 0.3))} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-colors" title="Diminuir Zoom"><ZoomOut size={18}/></button>

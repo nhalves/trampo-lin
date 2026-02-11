@@ -108,7 +108,7 @@ const cleanJSON = (text: string): string => {
 
 // --- PUBLIC SERVICES ---
 
-export const improveText = async (text: string, context: string = 'resume', tone: string = 'professional'): Promise<string> => {
+export const improveText = async (text: string, context: string = 'resume', tone: string = 'professional', action?: 'grammar' | 'shorter' | 'longer'): Promise<string> => {
   if (!text) return text;
   
   try {
@@ -119,11 +119,20 @@ export const improveText = async (text: string, context: string = 'resume', tone
         enthusiastic: "energético, apaixonado, confiante e motivador."
     };
 
-    const selectedTone = tonePrompts[tone] || tonePrompts['professional'];
-    const system = `Você é um especialista em currículos e RH. Reescreva o texto do usuário para torná-lo mais impactante.
-    ESTILO: ${selectedTone}
+    let specificInstruction = `Reescreva o texto do usuário para torná-lo mais impactante.
+    ESTILO: ${tonePrompts[tone] || tonePrompts['professional']}`;
+
+    if (action === 'grammar') {
+        specificInstruction = `Você é um corretor ortográfico estrito. Corrija APENAS erros gramaticais e de pontuação. Mantenha o estilo e palavras originais o máximo possível.`;
+    } else if (action === 'shorter') {
+        specificInstruction = `Resuma o texto mantendo os pontos-chave. Reduza o tamanho em cerca de 30%. Seja conciso.`;
+    } else if (action === 'longer') {
+        specificInstruction = `Expanda o texto adicionando detalhes profissionais e contexto, sem inventar mentiras. Aumente o tamanho em cerca de 30%.`;
+    }
+
+    const system = `${specificInstruction}
     IDIOMA: Português do Brasil.
-    REGRAS: Manter o tamanho aproximado. Usar verbos de ação. Retornar APENAS o texto melhorado.`;
+    REGRAS: Retornar APENAS o texto resultante, sem aspas ou explicações.`;
 
     return await callLLM(`Texto original (seção: ${context}): "${text}"`, system);
   } catch (error) {
@@ -195,6 +204,23 @@ export const generateCoverLetter = async (resumeData: any, company: string, job:
   }
 };
 
+export const generateInterviewQuestions = async (resumeData: any): Promise<string> => {
+    try {
+        const context = `Cargo Alvo: ${resumeData.personalInfo.jobTitle}. Resumo: ${resumeData.personalInfo.summary}. Exp: ${JSON.stringify(resumeData.experience.slice(0,2))}`;
+        const system = `Você é um recrutador técnico exigente. Com base no perfil do candidato, gere 5 perguntas de entrevista desafiadoras (3 técnicas, 2 comportamentais). Retorne apenas as perguntas em formato de lista Markdown.`;
+        return await callLLM(context, system);
+    } catch (e) { return "Erro ao gerar perguntas."; }
+};
+
+export const generateLinkedinHeadline = async (resumeData: any): Promise<string> => {
+    try {
+        const context = `Nome: ${resumeData.personalInfo.fullName}. Cargo: ${resumeData.personalInfo.jobTitle}. Skills: ${resumeData.skills.map((s:any) => s.name).join(', ')}`;
+        const system = `Crie 3 opções de Headline para LinkedIn (máx 220 chars) que sejam atraentes e usem palavras-chave. Retorne apenas as 3 opções separadas por quebra de linha. Use ícones/emojis moderadamente.`;
+        return await callLLM(context, system);
+    } catch (e) { return "Erro ao gerar headline."; }
+};
+
+
 // Nota: analyzeJobMatch e extractResumeFromPdf dependem de multimodalidade (ler PDF/Imagens).
 // O OpenRouter suporta multimodalidade em alguns modelos (GPT-4o, Claude 3.5 Sonnet, Gemini 1.5 Pro).
 // Para simplificar, vamos manter a lógica de texto para ambos, ou adaptar se o modelo suportar.
@@ -226,16 +252,12 @@ export const analyzeJobMatch = async (resumeInput: string | { mimeType: string, 
   }
 
   // Fallback para OpenRouter ou Gemini Texto
-  // Se for arquivo binário no OpenRouter, precisaríamos de modelos Vision.
-  // Por segurança, se for binário e OpenRouter, avisamos que não é suportado totalmente nesta demo, 
-  // ou tentamos enviar como texto se o usuário passou JSON string.
   
   let resumeTextContent = "";
   if (typeof resumeInput === 'string') {
       resumeTextContent = resumeInput;
   } else {
       // Se estiver usando OpenRouter com PDF, isso é complexo sem OCR prévio ou modelo Vision específico.
-      // Vamos tentar assumir que é texto ou falhar graciosamente.
       return { score: 0, feedback: ["A análise de PDF direto só está disponível com o provedor Google Gemini padrão no momento."], missingKeywords: [] };
   }
 

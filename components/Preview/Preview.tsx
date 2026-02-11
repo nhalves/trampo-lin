@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { ResumeData, ThemeConfig, ResumeSettings, Skill } from '../../types';
-import { MapPin, Mail, Phone, Linkedin, Globe, Github, Twitter, ExternalLink, Dribbble, Youtube, Facebook, Instagram, Hash, Star, Code, Heart, PenTool, Award } from 'lucide-react';
+import { MapPin, Mail, Phone, Linkedin, Globe, Github, Twitter, ExternalLink, Dribbble, Youtube, Facebook, Instagram, Hash, Star, Code, Heart, PenTool, Award, BookOpen, UserCheck, Zap, Feather } from 'lucide-react';
 
 interface PreviewProps {
   data: ResumeData;
@@ -115,8 +115,6 @@ const ContactItem = ({ icon: Icon, text, link, primary, className, privacyMode }
 const SectionTitle = ({ title, font, accent, primary, style = 'simple', dark, gradient }: { title: string, font: string, accent: string, primary: string, style?: string, dark?: boolean, gradient?: string }) => {
   let classes = `text-sm font-bold uppercase tracking-wider mb-4 pb-1 ${font} break-after-avoid break-inside-avoid print:text-black `;
   let inlineStyles: React.CSSProperties = { color: dark ? '#fff' : primary };
-  
-  // No print, forçamos cores legíveis
   
   if (style === 'underline') {
       inlineStyles.borderBottom = `2px solid ${accent}`;
@@ -291,6 +289,34 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume' }
               <div className="text-sm opacity-90 print:text-black">{data.languages.join(' • ')}</div>
             </div>
          );
+      case 'interests':
+         if (data.interests.length === 0) return null;
+         return (
+            <div className="mb-6 group-section break-inside-avoid">
+              <SectionTitle title="Interesses" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
+              <div className="text-sm opacity-90 print:text-black flex flex-wrap gap-2">
+                  {data.interests.map(int => (
+                      <span key={int.id} className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300 text-xs print:border print:bg-white">{int.name}</span>
+                  ))}
+              </div>
+            </div>
+         );
+      case 'publications':
+         if (data.publications.length === 0) return null;
+         return (
+             <div className="mb-6 group-section break-inside-avoid">
+                 <SectionTitle title="Publicações" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
+                 {data.publications.map(pub => (
+                     <div key={pub.id} className="mb-3 break-inside-avoid">
+                         <div className="font-bold flex items-center gap-1 print:text-black">
+                            {pub.title}
+                            {pub.url && <a href={sanitizeLink(pub.url)} target="_blank" rel="noreferrer"><ExternalLink size={10} className="text-blue-500"/></a>}
+                         </div>
+                         <div className="text-xs opacity-70 italic print:text-black">{pub.publisher} • {pub.date}</div>
+                     </div>
+                 ))}
+             </div>
+         );
       case 'volunteer':
          if (data.volunteer.length === 0) return null;
          return (
@@ -388,20 +414,44 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume' }
       }
   };
 
+  const getBackgroundStyle = () => {
+      const color = colors.accent + '20'; // 12% opacity
+      switch(settings.backgroundPattern) {
+          case 'dots': return { backgroundImage: `radial-gradient(${color} 1px, transparent 1px)`, backgroundSize: '20px 20px' };
+          case 'grid': return { backgroundImage: `linear-gradient(${color} 1px, transparent 1px), linear-gradient(90deg, ${color} 1px, transparent 1px)`, backgroundSize: '20px 20px' };
+          case 'lines': return { backgroundImage: `repeating-linear-gradient(45deg, ${color}, ${color} 1px, transparent 1px, transparent 10px)` };
+          default: return {};
+      }
+  };
+
   const renderSingleColumn = () => (
-    <div className={`p-${8 * settings.marginScale} max-w-3xl mx-auto h-full`}>
-       <div className={`flex flex-col mb-8 ${getAlignmentClasses()}`}>
+    <div className={`p-${8 * settings.marginScale} max-w-3xl mx-auto h-full relative`}>
+       {settings.watermark && (
+           <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5 z-0">
+               <span className="text-8xl font-black -rotate-45 uppercase text-slate-900">Rascunho</span>
+           </div>
+       )}
+       
+       <div className={`relative z-10 flex flex-col mb-8 ${getAlignmentClasses()}`}>
           {data.personalInfo.photoUrl && <img src={data.personalInfo.photoUrl} className={`w-24 h-24 mb-4 object-cover border-4 border-white shadow-sm ${getPhotoClasses()}`}/>}
           <h1 className={`text-4xl font-bold mb-2 uppercase tracking-tight ${headerFontClass} print:text-black`} style={{color: primaryColor}}>{data.personalInfo.fullName}</h1>
           <p className={`text-xl mb-4 ${bodyFontClass} print:text-black`} style={{color: colors.accent}}>{data.personalInfo.jobTitle}</p>
           <ContactList />
        </div>
        {data.settings.visibleSections.summary && data.personalInfo.summary && (
-         <div className={`mb-8 ${settings.headerAlignment === 'center' ? 'text-center px-8' : ''}`}>
+         <div className={`mb-8 relative z-10 ${settings.headerAlignment === 'center' ? 'text-center px-8' : ''}`}>
             <div className={`text-sm leading-relaxed opacity-80 ${bodyFontClass} print:text-black`}><MarkdownText text={data.personalInfo.summary} /></div>
          </div>
        )}
-       {data.settings.sectionOrder.map(id => renderSection(id))}
+       <div className="relative z-10">
+           {data.settings.sectionOrder.map(id => renderSection(id))}
+       </div>
+       
+       {data.personalInfo.signature && (
+           <div className="mt-12 pt-4 border-t border-slate-200 w-48 break-inside-avoid">
+               <p className="font-handwriting text-xl text-slate-800 dark:text-slate-300 print:text-black" style={{fontFamily: 'cursive'}}>{data.personalInfo.signature}</p>
+           </div>
+       )}
     </div>
   );
 
@@ -431,23 +481,37 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume' }
           <div className="mt-4">
              {renderSection('skills')}
              {renderSection('languages')}
+             {renderSection('interests')}
              {renderSection('awards')}
           </div>
        </div>
-       <div className={`flex-1 p-${8 * settings.marginScale} bg-white`}>
-          {theme.id === 'timeline-pro' && (
-             <div className="mb-8 border-b pb-4">
-                <h1 className={`text-4xl font-bold mb-1 ${headerFontClass} print:text-black`} style={{color: primaryColor}}>{data.personalInfo.fullName}</h1>
-                <p className="text-xl opacity-70 print:text-black">{data.personalInfo.jobTitle}</p>
-             </div>
+       <div className={`flex-1 p-${8 * settings.marginScale} bg-white relative`}>
+          {settings.watermark && (
+               <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5 z-0">
+                   <span className="text-8xl font-black -rotate-45 uppercase text-slate-900">Rascunho</span>
+               </div>
           )}
-          {data.settings.visibleSections.summary && data.personalInfo.summary && (
-             <div className="mb-8">
-                <SectionTitle title="Resumo" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} gradient={theme.gradient} />
-                <div className="text-sm leading-relaxed opacity-80 print:text-black"><MarkdownText text={data.personalInfo.summary} /></div>
-             </div>
-          )}
-          {data.settings.sectionOrder.filter(id => !['skills','languages','awards'].includes(id)).map(id => renderSection(id))}
+          <div className="relative z-10">
+              {theme.id === 'timeline-pro' && (
+                 <div className="mb-8 border-b pb-4">
+                    <h1 className={`text-4xl font-bold mb-1 ${headerFontClass} print:text-black`} style={{color: primaryColor}}>{data.personalInfo.fullName}</h1>
+                    <p className="text-xl opacity-70 print:text-black">{data.personalInfo.jobTitle}</p>
+                 </div>
+              )}
+              {data.settings.visibleSections.summary && data.personalInfo.summary && (
+                 <div className="mb-8">
+                    <SectionTitle title="Resumo" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} gradient={theme.gradient} />
+                    <div className="text-sm leading-relaxed opacity-80 print:text-black"><MarkdownText text={data.personalInfo.summary} /></div>
+                 </div>
+              )}
+              {data.settings.sectionOrder.filter(id => !['skills','languages','awards','interests'].includes(id)).map(id => renderSection(id))}
+              
+              {data.personalInfo.signature && (
+               <div className="mt-12 pt-4 border-t border-slate-200 w-48 break-inside-avoid">
+                   <p className="font-handwriting text-xl text-slate-800 dark:text-slate-300 print:text-black" style={{fontFamily: 'cursive'}}>{data.personalInfo.signature}</p>
+               </div>
+             )}
+          </div>
        </div>
     </div>
   );
@@ -475,9 +539,10 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume' }
               {renderSection('skills')}
               {renderSection('education')}
               {renderSection('languages')}
+              {renderSection('interests')}
            </div>
            <div className="col-span-8">
-              {data.settings.sectionOrder.filter(id => !['skills','education','languages'].includes(id)).map(id => (
+              {data.settings.sectionOrder.filter(id => !['skills','education','languages','interests'].includes(id)).map(id => (
                   <div key={id} className="mb-8 border-l-2 border-slate-100 pl-4">
                       {renderSection(id)}
                   </div>
@@ -517,6 +582,7 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume' }
               {renderSection('education')}
               {renderSection('skills')}
               {renderSection('languages')}
+              {renderSection('interests')}
            </div>
         </div>
      </div>
@@ -549,8 +615,11 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume' }
   if (theme.id === 'geometric-pop') Content = renderGeometric;
   if (theme.id === 'tech-dark') Content = renderSingleColumn; 
 
+  const patternStyle = getBackgroundStyle();
+  const glassClass = settings.glassmorphism ? 'backdrop-blur-sm bg-opacity-90' : '';
+
   return (
-    <div className={`w-full h-full min-h-full print:h-auto overflow-hidden print:overflow-visible bg-white relative print:shadow-none ${settings.grayscale ? 'grayscale' : ''}`} style={style}>
+    <div className={`w-full h-full min-h-full print:h-auto overflow-hidden print:overflow-visible bg-white relative print:shadow-none print:!bg-white print:!text-black ${settings.grayscale ? 'grayscale' : ''} ${glassClass}`} style={{...style, ...patternStyle}}>
         {/* Page Guide Overlay */}
         <div className="absolute top-[1122px] left-0 w-full border-b-2 border-dashed border-red-300 opacity-50 z-50 pointer-events-none print:hidden flex items-center justify-center">
             <span className="bg-red-100 text-red-500 text-[10px] px-1">Fim da Página 1 (A4)</span>

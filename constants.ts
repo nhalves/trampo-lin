@@ -19,6 +19,7 @@ export const INITIAL_RESUME: ResumeData = {
     medium: '',
     photoUrl: '',
     summary: '',
+    signature: ''
   },
   coverLetter: {
     recipientName: 'Gestor de Contratação',
@@ -32,6 +33,8 @@ export const INITIAL_RESUME: ResumeData = {
   certifications: [],
   volunteer: [],
   awards: [],
+  publications: [],
+  interests: [],
   references: [],
   customSections: [],
   skills: [],
@@ -41,7 +44,7 @@ export const INITIAL_RESUME: ResumeData = {
     spacingScale: 1,
     marginScale: 1,
     lineHeight: 1.5,
-    sectionOrder: ['experience', 'education', 'skills', 'projects', 'certifications', 'languages', 'volunteer', 'awards', 'references', 'custom'],
+    sectionOrder: ['experience', 'education', 'skills', 'projects', 'certifications', 'publications', 'languages', 'volunteer', 'interests', 'awards', 'references', 'custom'],
     visibleSections: {
       experience: true,
       education: true,
@@ -53,7 +56,9 @@ export const INITIAL_RESUME: ResumeData = {
       volunteer: true,
       awards: true,
       references: true,
-      custom: true
+      custom: true,
+      publications: true,
+      interests: true
     },
     paperSize: 'a4',
     dateFormat: 'MMM yyyy',
@@ -68,7 +73,10 @@ export const INITIAL_RESUME: ResumeData = {
     showDuration: true,
     grayscale: false,
     privacyMode: false,
-    aiTone: 'professional'
+    aiTone: 'professional',
+    backgroundPattern: 'none',
+    glassmorphism: false,
+    watermark: false
   }
 };
 
@@ -227,6 +235,8 @@ export const AVAILABLE_FONTS = [
   { name: 'Open Sans', value: 'font-open' },
   { name: 'Montserrat', value: 'font-montserrat' },
   { name: 'Raleway', value: 'font-raleway' },
+  { name: 'Oswald (Strong)', value: 'font-[Oswald]' },
+  { name: 'Playfair (Elegant)', value: 'font-[Playfair_Display]' },
 ];
 
 export const FONT_PAIRINGS = [
@@ -235,4 +245,6 @@ export const FONT_PAIRINGS = [
   { name: 'Técnico (Mono + Sans)', header: 'font-mono', body: 'font-sans' },
   { name: 'Elegante (Raleway + Lato)', header: 'font-raleway', body: 'font-lato' },
   { name: 'Impacto (Poppins + Open Sans)', header: 'font-display', body: 'font-open' },
+  { name: 'Luxo (Playfair + Open)', header: 'font-[Playfair_Display]', body: 'font-open' },
+  { name: 'Bold (Oswald + Inter)', header: 'font-[Oswald]', body: 'font-sans' },
 ];

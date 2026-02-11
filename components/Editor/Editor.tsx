@@ -1,8 +1,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ResumeData, ResumeSettings } from '../../types';
-import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Wand2, Eye, EyeOff, ArrowUp, ArrowDown, Settings, Briefcase, GraduationCap, Medal, Code, User, Languages, FileText, Search, QrCode, Heart, Award, Users, FilePlus, Copy, Eraser, Languages as LangIcon, Upload, X, Type, Undo2, Redo2, Download, RefreshCw, Star, Globe, PenTool, CheckCircle2, AlertCircle, FileUp, Calendar, Link2, Mail, Phone, MapPin, FileJson, Twitter, Dribbble, Hash, Bold, Italic, List, Linkedin } from 'lucide-react';
-import { improveText, generateSummary, suggestSkills, generateCoverLetter, analyzeJobMatch, translateText, generateBulletPoints, extractResumeFromPdf } from '../../services/geminiService';
+import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Wand2, Eye, EyeOff, ArrowUp, ArrowDown, Settings, Briefcase, GraduationCap, Medal, Code, User, Languages, FileText, Search, QrCode, Heart, Award, Users, FilePlus, Copy, Eraser, Languages as LangIcon, Upload, X, Type, Undo2, Redo2, Download, RefreshCw, Star, Globe, PenTool, CheckCircle2, AlertCircle, FileUp, Calendar, Link2, Mail, Phone, MapPin, FileJson, Twitter, Dribbble, Hash, Bold, Italic, List, Linkedin, BookOpen, Feather, Zap, Smile, Book, Timer, MessageSquare, Briefcase as BriefcaseIcon, LayoutGrid } from 'lucide-react';
+import { improveText, generateSummary, suggestSkills, generateCoverLetter, analyzeJobMatch, translateText, generateBulletPoints, extractResumeFromPdf, generateInterviewQuestions, generateLinkedinHeadline } from '../../services/geminiService';
 import { AVAILABLE_FONTS, INITIAL_RESUME, FONT_PAIRINGS, EXAMPLE_PERSONAS } from '../../constants';
 
 interface EditorProps {
@@ -14,7 +14,7 @@ interface EditorProps {
 const COLOR_PRESETS = [
   '#000000', '#334155', '#1e3a8a', '#2563eb', '#0ea5e9', 
   '#0f766e', '#16a34a', '#ca8a04', '#ea580c', '#dc2626', 
-  '#be123c', '#7c3aed', '#4b5563'
+  '#be123c', '#7c3aed', '#4b5563', '#a855f7', '#ec4899', '#f43f5e'
 ];
 
 const CUSTOM_ICONS = [
@@ -23,7 +23,10 @@ const CUSTOM_ICONS = [
   { id: 'code', icon: Code, label: 'Código' },
   { id: 'heart', icon: Heart, label: 'Coração' },
   { id: 'pen', icon: PenTool, label: 'Caneta' },
-  { id: 'award', icon: Award, label: 'Prêmio' }
+  { id: 'award', icon: Award, label: 'Prêmio' },
+  { id: 'zap', icon: Zap, label: 'Raio' },
+  { id: 'feather', icon: Feather, label: 'Pena' },
+  { id: 'book', icon: BookOpen, label: 'Livro' }
 ];
 
 // Helper: Date Mask (MM/YYYY)
@@ -155,11 +158,15 @@ const Input = ({ label, value, onChange, type = "text", placeholder = "", step, 
 export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) => {
   const [openSection, setOpenSection] = useState<string>('personal');
   const [loadingAI, setLoadingAI] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'resume' | 'cover' | 'ats'>('resume');
+  const [activeTab, setActiveTab] = useState<'resume' | 'cover' | 'ats' | 'tools'>('resume');
   const [jobDescription, setJobDescription] = useState('');
   const [atsResult, setAtsResult] = useState<any>(null);
   const [atsFile, setAtsFile] = useState<{name: string, data: string, mimeType: string} | null>(null);
   const [showExamples, setShowExamples] = useState(false);
+  
+  // Extra Tools State
+  const [interviewQs, setInterviewQs] = useState<string>('');
+  const [linkedinHeadline, setLinkedinHeadline] = useState<string>('');
   
   // Undo/Redo Stacks
   const [history, setHistory] = useState<ResumeData[]>([]);
@@ -188,6 +195,10 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
           if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
               e.preventDefault();
               redo();
+          }
+          if ((e.ctrlKey || e.metaKey) && e.key === 'j') {
+              e.preventDefault();
+              setActiveTab('tools');
           }
       };
       window.addEventListener('keydown', handleKeyDown);
@@ -248,6 +259,8 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
   };
 
   const completeness = calculateCompleteness();
+  const wordCount = JSON.stringify(data).split(' ').length;
+  const readingTime = Math.ceil(wordCount / 200);
 
   const toggleVisibility = (section: string) => {
     const visibleSections = { ...data.settings.visibleSections };
@@ -331,13 +344,13 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
   };
 
   // --- Actions ---
-  const handleImproveText = async (text: string, path: (val: string) => void) => {
+  const handleImproveText = async (text: string, path: (val: string) => void, action: 'grammar' | 'shorter' | 'longer' = 'grammar') => {
     if (!text || text.length < 5) {
         onShowToast("Texto muito curto para análise.");
         return;
     }
     setLoadingAI('improving');
-    const improved = await improveText(text, 'resume', data.settings.aiTone);
+    const improved = await improveText(text, 'resume', data.settings.aiTone, action);
     path(improved);
     setLoadingAI(null);
     onShowToast("✨ Texto aprimorado!");
@@ -371,6 +384,20 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
     handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, summary } });
     setLoadingAI(null);
     onShowToast("✨ Resumo criado!");
+  };
+  
+  const handleAIInterview = async () => {
+      setLoadingAI('interview');
+      const res = await generateInterviewQuestions(data);
+      setInterviewQs(res);
+      setLoadingAI(null);
+  };
+
+  const handleAIHeadline = async () => {
+      setLoadingAI('headline');
+      const res = await generateLinkedinHeadline(data);
+      setLinkedinHeadline(res);
+      setLoadingAI(null);
   };
 
   const handleTranslate = async (lang: string) => {
@@ -487,7 +514,7 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 pr-8">
               {fields.map(f => {
-                if (f.key === 'startDate' || f.key === 'endDate') {
+                if (f.key === 'startDate' || f.key === 'endDate' || f.key === 'date') {
                     // Logic specifically for dates in Experience/Education
                     return (
                         <div key={f.key}>
@@ -582,19 +609,34 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
       </div>
 
       {/* Modern Tabs */}
-      <div className="flex px-4 pt-4 pb-2 gap-4 bg-white dark:bg-slate-900 select-none">
-        <button onClick={() => setActiveTab('resume')} className={`flex-1 pb-3 text-sm font-semibold flex items-center justify-center gap-2 border-b-2 transition-all ${activeTab === 'resume' ? 'text-trampo-600 border-trampo-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}><FileText size={16}/> Editor</button>
-        <button onClick={() => setActiveTab('cover')} className={`flex-1 pb-3 text-sm font-semibold flex items-center justify-center gap-2 border-b-2 transition-all ${activeTab === 'cover' ? 'text-purple-600 border-purple-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}><Wand2 size={16}/> Carta</button>
-        <button onClick={() => setActiveTab('ats')} className={`flex-1 pb-3 text-sm font-semibold flex items-center justify-center gap-2 border-b-2 transition-all ${activeTab === 'ats' ? 'text-emerald-600 border-emerald-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}><Search size={16}/> ATS</button>
+      <div className="flex px-4 pt-4 pb-2 gap-4 bg-white dark:bg-slate-900 select-none overflow-x-auto">
+        <button onClick={() => setActiveTab('resume')} className={`flex-1 min-w-fit pb-3 text-sm font-semibold flex items-center justify-center gap-2 border-b-2 transition-all ${activeTab === 'resume' ? 'text-trampo-600 border-trampo-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}><FileText size={16}/> Editor</button>
+        <button onClick={() => setActiveTab('tools')} className={`flex-1 min-w-fit pb-3 text-sm font-semibold flex items-center justify-center gap-2 border-b-2 transition-all ${activeTab === 'tools' ? 'text-amber-600 border-amber-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}><Zap size={16}/> Ferramentas</button>
+        <button onClick={() => setActiveTab('cover')} className={`flex-1 min-w-fit pb-3 text-sm font-semibold flex items-center justify-center gap-2 border-b-2 transition-all ${activeTab === 'cover' ? 'text-purple-600 border-purple-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}><Wand2 size={16}/> Carta</button>
+        <button onClick={() => setActiveTab('ats')} className={`flex-1 min-w-fit pb-3 text-sm font-semibold flex items-center justify-center gap-2 border-b-2 transition-all ${activeTab === 'ats' ? 'text-emerald-600 border-emerald-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}><Search size={16}/> ATS</button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-6 custom-scrollbar scroll-smooth">
         {activeTab === 'resume' && (
           <div className="space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-2 duration-300">
-             {/* Progress Bar */}
-             <div className="mb-6 bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden relative group cursor-help" title="Nível de preenchimento do currículo">
-               <div className="bg-gradient-to-r from-trampo-400 to-trampo-600 h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(14,165,233,0.4)]" style={{ width: `${completeness}%` }}></div>
-               <span className="absolute -top-6 right-0 text-[10px] font-bold text-slate-400">{completeness}% Completo</span>
+             {/* Stats & Checklist Widget (New) */}
+             <div className="grid grid-cols-2 gap-4 mb-2">
+                 <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col gap-1">
+                     <span className="text-[10px] uppercase font-bold text-slate-400">Progresso</span>
+                     <div className="flex items-center gap-2">
+                         <div className="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                             <div className="bg-trampo-500 h-full rounded-full transition-all" style={{width: `${completeness}%`}}></div>
+                         </div>
+                         <span className="text-xs font-bold">{completeness}%</span>
+                     </div>
+                 </div>
+                 <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col gap-1">
+                     <span className="text-[10px] uppercase font-bold text-slate-400">Métricas</span>
+                     <div className="flex gap-3 text-xs text-slate-600 dark:text-slate-300">
+                         <span className="flex items-center gap-1" title="Contagem de Palavras"><Book size={12}/> {wordCount}</span>
+                         <span className="flex items-center gap-1" title="Tempo de Leitura"><Timer size={12}/> ~{readingTime}min</span>
+                     </div>
+                 </div>
              </div>
 
              {/* Personal Info */}
@@ -628,6 +670,12 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
                    <Input label="Twitter / X" value={data.personalInfo.twitter} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, twitter: v } })} placeholder="x.com/voce" icon={Twitter} />
                    <Input label="Behance" value={data.personalInfo.behance} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, behance: v } })} placeholder="behance.net/voce" icon={Hash} />
                 </div>
+                
+                {/* Signature Field */}
+                <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
+                     <Input label="Assinatura Digital (Opcional)" value={data.personalInfo.signature || ''} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, signature: v } })} placeholder="Digite seu nome para assinar" icon={PenTool} />
+                </div>
+
                 <div className="mt-5">
                   <div className="flex justify-between items-center mb-1.5">
                     <label className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider ml-1">Resumo Profissional</label>
@@ -652,7 +700,11 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
                         onChange={(e: any) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, summary: e.target.value } })}
                         placeholder="Breve descrição sobre sua experiência, paixões e o que busca..." 
                     />
-                    <button onClick={() => handleImproveText(data.personalInfo.summary, (v) => handleChangeWithHistory({...data, personalInfo: {...data.personalInfo, summary: v}}))} className="absolute bottom-3 right-3 text-purple-600 bg-white dark:bg-slate-800 rounded-lg p-1.5 shadow-sm border border-slate-200 dark:border-slate-700 opacity-0 group-hover:opacity-100 transition-all hover:scale-105"><Wand2 size={16}/></button>
+                    <div className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <button onClick={() => handleImproveText(data.personalInfo.summary, (v) => handleChangeWithHistory({...data, personalInfo: {...data.personalInfo, summary: v}}), 'shorter')} className="text-slate-500 hover:text-trampo-600 bg-white dark:bg-slate-800 rounded-md p-1.5 shadow border border-slate-200 dark:border-slate-700 text-[10px] font-bold" title="Encurtar">CURTO</button>
+                         <button onClick={() => handleImproveText(data.personalInfo.summary, (v) => handleChangeWithHistory({...data, personalInfo: {...data.personalInfo, summary: v}}), 'grammar')} className="text-slate-500 hover:text-green-600 bg-white dark:bg-slate-800 rounded-md p-1.5 shadow border border-slate-200 dark:border-slate-700 text-[10px] font-bold" title="Corrigir Gramática">ABC✓</button>
+                         <button onClick={() => handleImproveText(data.personalInfo.summary, (v) => handleChangeWithHistory({...data, personalInfo: {...data.personalInfo, summary: v}}))} className="text-purple-600 bg-white dark:bg-slate-800 rounded-md p-1.5 shadow border border-slate-200 dark:border-slate-700 hover:scale-105"><Wand2 size={16}/></button>
+                    </div>
                   </div>
                 </div>
              </Section>
@@ -705,6 +757,25 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
                 </div>
              </Section>
             
+             {/* New Sections: Publications & Interests */}
+             <Section title="Publicações" icon={BookOpen} isOpen={openSection === 'publications'} onToggle={() => toggleSection('publications')} isVisible={data.settings.visibleSections.publications} onVisibilityToggle={() => toggleVisibility('publications')} onClear={() => clearList('publications')} itemCount={data.publications.length}>
+               {renderGenericList('publications', 'title', 'publisher', { title: 'Título', publisher: 'Editora', date: '', url: '' }, [
+                 { key: 'title', label: 'Título' }, { key: 'publisher', label: 'Editora/Veículo' }, { key: 'date', label: 'Data', type: 'text' }, { key: 'url', label: 'Link' }
+               ])}
+             </Section>
+
+             <Section title="Interesses" icon={Smile} isOpen={openSection === 'interests'} onToggle={() => toggleSection('interests')} isVisible={data.settings.visibleSections.interests} onVisibilityToggle={() => toggleVisibility('interests')} onClear={() => clearList('interests')} itemCount={data.interests.length}>
+                <div className="flex flex-wrap gap-2">
+                   {data.interests.map((int, i) => (
+                     <div key={int.id} className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg shadow-sm">
+                       <input value={int.name} onChange={(e) => { const ints = [...data.interests]; ints[i].name = e.target.value; handleChangeWithHistory({...data, interests: ints}); }} className="bg-transparent text-sm w-32 outline-none dark:text-slate-200" placeholder="Interesse" />
+                       <button onClick={() => { const ints = [...data.interests]; ints.splice(i, 1); handleChangeWithHistory({...data, interests: ints}); }} className="text-slate-300 hover:text-red-500"><Trash2 size={12}/></button>
+                     </div>
+                   ))}
+                   <button onClick={() => handleChangeWithHistory({...data, interests: [...data.interests, {id: Date.now().toString(), name: 'Novo Interesse'}]})} className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-sm hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-300 transition-all">+ Add</button>
+                </div>
+             </Section>
+
              <Section title="Voluntariado" icon={Heart} isOpen={openSection === 'volunteer'} onToggle={() => toggleSection('volunteer')} isVisible={data.settings.visibleSections.volunteer} onVisibilityToggle={() => toggleVisibility('volunteer')} onClear={() => clearList('volunteer')}>
                {renderGenericList('volunteer', 'role', 'organization', { role: 'Voluntário', organization: 'ONG' }, [
                  { key: 'role', label: 'Função' }, { key: 'organization', label: 'Organização' }, { key: 'startDate', label: 'Período', type: 'text' }
@@ -783,7 +854,7 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
              </Section>
 
              {/* Settings Section Moved to Bottom for logical flow */}
-             <Section title="Configurações & Layout" icon={Settings} isOpen={openSection === 'settings'} onToggle={() => toggleSection('settings')}>
+             <Section title="Configurações & Visual" icon={Settings} isOpen={openSection === 'settings'} onToggle={() => toggleSection('settings')}>
                <div className="space-y-5">
                  
                  {/* Escalas */}
@@ -794,6 +865,26 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
                     <Input label="Alt. Linha" value={data.settings.lineHeight} onChange={(v: string) => updateSettings('lineHeight', v)} type="number" step="0.1" />
                  </div>
                  
+                 {/* Estilos Visuais Avançados */}
+                 <div className="grid grid-cols-2 gap-3">
+                     <div>
+                         <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Padrão de Fundo</label>
+                         <select className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-200 focus:ring-2 focus:ring-trampo-500/20 outline-none" value={data.settings.backgroundPattern} onChange={(e) => updateSettings('backgroundPattern', e.target.value)}>
+                             <option value="none">Nenhum</option>
+                             <option value="dots">Pontilhado</option>
+                             <option value="grid">Grade (Grid)</option>
+                             <option value="lines">Linhas Diagonais</option>
+                         </select>
+                     </div>
+                     <div>
+                         <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Efeito Glass</label>
+                         <button onClick={() => updateSettings('glassmorphism', !data.settings.glassmorphism)} className={`w-full px-3 py-2 text-sm border rounded-lg transition-colors flex items-center justify-between ${data.settings.glassmorphism ? 'bg-trampo-100 border-trampo-300 text-trampo-700' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
+                             {data.settings.glassmorphism ? 'Ativado' : 'Desativado'}
+                             {data.settings.glassmorphism ? <Eye size={16}/> : <EyeOff size={16}/>}
+                         </button>
+                     </div>
+                 </div>
+
                  {/* Font Pairings */}
                  <div>
                     <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-2">Combinações de Fontes</label>
@@ -901,6 +992,7 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
                    <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer select-none"><input type="checkbox" className="rounded text-trampo-600 focus:ring-trampo-500" checked={data.settings.compactMode} onChange={(e) => updateSettings('compactMode', e.target.checked)} /> Modo Compacto</label>
                    <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer select-none"><input type="checkbox" className="rounded text-trampo-600 focus:ring-trampo-500" checked={data.settings.showDuration} onChange={(e) => updateSettings('showDuration', e.target.checked)} /> Mostrar Duração</label>
                    <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer select-none"><input type="checkbox" className="rounded text-trampo-600 focus:ring-trampo-500" checked={data.settings.grayscale} onChange={(e) => updateSettings('grayscale', e.target.checked)} /> Modo P&B</label>
+                   <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer select-none"><input type="checkbox" className="rounded text-trampo-600 focus:ring-trampo-500" checked={data.settings.watermark} onChange={(e) => updateSettings('watermark', e.target.checked)} /> Marca d'água Rascunho</label>
                  </div>
                  
                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
@@ -938,6 +1030,70 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
           </div>
         )}
         
+        {activeTab === 'tools' && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-100 dark:border-amber-900/30">
+                    <h3 className="font-bold text-amber-900 dark:text-amber-300 flex items-center gap-2 mb-2"><Zap size={20}/> Ferramentas Extras</h3>
+                    <p className="text-xs text-amber-700 dark:text-amber-400">Recursos poderosos para impulsionar sua candidatura.</p>
+                </div>
+
+                {/* Interview Prep */}
+                <div className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+                     <h4 className="font-bold text-sm mb-2 flex items-center gap-2"><MessageSquare size={16}/> Simulador de Entrevista</h4>
+                     <p className="text-xs text-slate-500 mb-4">A IA gera perguntas baseadas especificamente no seu currículo.</p>
+                     <button onClick={handleAIInterview} disabled={!!loadingAI} className="w-full py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+                         {loadingAI === 'interview' ? 'Gerando...' : 'Gerar Perguntas'}
+                     </button>
+                     {interviewQs && (
+                         <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-900 rounded-lg text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap border border-slate-200 dark:border-slate-800">
+                             {interviewQs}
+                         </div>
+                     )}
+                </div>
+
+                {/* LinkedIn Headline */}
+                <div className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+                     <h4 className="font-bold text-sm mb-2 flex items-center gap-2"><Linkedin size={16}/> Gerador de Headline LinkedIn</h4>
+                     <p className="text-xs text-slate-500 mb-4">Crie títulos chamativos para seu perfil profissional.</p>
+                     <button onClick={handleAIHeadline} disabled={!!loadingAI} className="w-full py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+                         {loadingAI === 'headline' ? 'Criando...' : 'Criar Headlines'}
+                     </button>
+                     {linkedinHeadline && (
+                         <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-900 rounded-lg text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap border border-slate-200 dark:border-slate-800">
+                             {linkedinHeadline}
+                         </div>
+                     )}
+                </div>
+
+                {/* Checklist */}
+                <div className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+                    <h4 className="font-bold text-sm mb-2 flex items-center gap-2"><CheckCircle2 size={16}/> Checklist Final</h4>
+                    <div className="space-y-2 text-xs">
+                        <div className="flex items-center gap-2">
+                            {data.personalInfo.email ? <CheckCircle2 size={14} className="text-green-500"/> : <AlertCircle size={14} className="text-red-500"/>}
+                            <span>Email de contato inserido</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {data.personalInfo.phone ? <CheckCircle2 size={14} className="text-green-500"/> : <AlertCircle size={14} className="text-red-500"/>}
+                            <span>Telefone de contato inserido</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                             {data.personalInfo.linkedin ? <CheckCircle2 size={14} className="text-green-500"/> : <AlertCircle size={14} className="text-yellow-500"/>}
+                             <span>LinkedIn vinculado (Recomendado)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                             {data.experience.length > 0 ? <CheckCircle2 size={14} className="text-green-500"/> : <AlertCircle size={14} className="text-red-500"/>}
+                             <span>Pelo menos 1 experiência profissional</span>
+                        </div>
+                         <div className="flex items-center gap-2">
+                             {data.skills.length >= 5 ? <CheckCircle2 size={14} className="text-green-500"/> : <AlertCircle size={14} className="text-yellow-500"/>}
+                             <span>Lista de skills robusta (5+)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
+
         {activeTab === 'cover' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="bg-purple-50 dark:bg-purple-900/10 p-4 rounded-xl border border-purple-100 dark:border-purple-900/30">

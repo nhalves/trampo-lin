@@ -53,6 +53,19 @@ export interface Award {
   date: string;
 }
 
+export interface Publication {
+  id: string;
+  title: string;
+  publisher: string;
+  date: string;
+  url: string;
+}
+
+export interface Interest {
+  id: string;
+  name: string;
+}
+
 export interface Reference {
   id: string;
   name: string;
@@ -86,7 +99,7 @@ export interface ResumeSettings {
   fontScale: number;
   spacingScale: number;
   marginScale: number;
-  lineHeight: number; // Novo: Altura da linha
+  lineHeight: number;
   primaryColor?: string;
   sectionOrder: string[];
   visibleSections: Record<string, boolean>;
@@ -95,15 +108,20 @@ export interface ResumeSettings {
   headerFont: string;
   bodyFont: string;
   headerStyle: 'simple' | 'underline' | 'box' | 'left-bar' | 'gradient';
-  headerAlignment: 'left' | 'center' | 'right'; // Novo
-  photoShape: 'square' | 'rounded' | 'circle'; // Novo
-  skillStyle: 'tags' | 'bar' | 'dots' | 'circles' | 'hidden'; // Novo: Circles
+  headerAlignment: 'left' | 'center' | 'right';
+  photoShape: 'square' | 'rounded' | 'circle';
+  skillStyle: 'tags' | 'bar' | 'dots' | 'circles' | 'hidden';
   showQrCode: boolean;
   compactMode: boolean;
   showDuration: boolean;
-  grayscale: boolean; // Novo
-  privacyMode: boolean; // Novo: Borrar dados sensíveis
-  aiTone: 'professional' | 'creative' | 'academic' | 'enthusiastic'; // Novo
+  grayscale: boolean;
+  privacyMode: boolean;
+  aiTone: 'professional' | 'creative' | 'academic' | 'enthusiastic';
+  
+  // New Features
+  backgroundPattern: 'none' | 'dots' | 'grid' | 'lines' | 'geometric';
+  glassmorphism: boolean;
+  watermark: boolean;
 }
 
 export interface CoverLetterData {
@@ -125,12 +143,13 @@ export interface ResumeData {
     website: string;
     linkedin: string;
     github: string;
-    twitter: string; // Novo
-    behance: string; // Novo
+    twitter: string;
+    behance: string;
     dribbble: string;
     medium: string;
     photoUrl: string;
     summary: string;
+    signature?: string; // New: Signature text
   };
   coverLetter: CoverLetterData;
   experience: Experience[];
@@ -139,6 +158,8 @@ export interface ResumeData {
   certifications: Certification[];
   volunteer: Volunteer[];
   awards: Award[];
+  publications: Publication[]; // New Section
+  interests: Interest[]; // New Section
   references: Reference[];
   customSections: CustomSection[];
   skills: Skill[];
