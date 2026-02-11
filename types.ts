@@ -146,6 +146,12 @@ export interface ResumeData {
   settings: ResumeSettings;
 }
 
+export interface AIConfig {
+  provider: 'gemini' | 'openrouter';
+  apiKey: string;
+  model: string;
+}
+
 export type ThemeId = 
   | 'modern-slate'
   | 'classic-serif'

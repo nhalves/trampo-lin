@@ -2,9 +2,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Editor } from './components/Editor/Editor';
 import { Preview } from './components/Preview/Preview';
-import { ResumeData, ThemeId } from './types';
+import { ResumeData, ThemeId, AIConfig } from './types';
 import { INITIAL_RESUME, THEMES } from './constants';
-import { Printer, Download, Upload, RotateCcw, Palette, Layout, Moon, Sun, Save, FileText, ZoomIn, ZoomOut, UserPlus, Menu, Eye, EyeOff, FileType } from 'lucide-react';
+import { getAIConfig, saveAIConfig } from './services/geminiService';
+import { Printer, Download, Upload, RotateCcw, Palette, Layout, Moon, Sun, Save, FileText, ZoomIn, ZoomOut, UserPlus, Menu, Eye, EyeOff, FileType, Bot, Settings2, Check, X } from 'lucide-react';
 
 const Toast = ({ message, onClose }: { message: string, onClose: () => void }) => {
   useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]);
@@ -22,6 +23,10 @@ const App: React.FC = () => {
   const [savedProfiles, setSavedProfiles] = useState<ResumeData[]>([]);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showMobilePreview, setShowMobilePreview] = useState(false);
+  
+  // AI Settings State
+  const [showAISettings, setShowAISettings] = useState(false);
+  const [aiConfig, setAiConfig] = useState<AIConfig>(getAIConfig());
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const printRef = useRef<HTMLDivElement>(null);
@@ -45,6 +50,9 @@ const App: React.FC = () => {
     
     // Initial Zoom based on screen width
     if (window.innerWidth < 768) setZoom(0.5);
+    
+    // Load AI Config
+    setAiConfig(getAIConfig());
   }, []);
 
   // Save Logic & Title Update
@@ -109,7 +117,6 @@ const App: React.FC = () => {
   };
 
   const handlePrint = () => {
-      // Ensure we print in light mode context if needed via CSS, but JS title help
       const oldTitle = document.title;
       const sanitizedName = resumeData.personalInfo.fullName.replace(/[^a-z0-9]/gi, '_');
       const sanitizedJob = resumeData.personalInfo.jobTitle.replace(/[^a-z0-9]/gi, '_');
@@ -136,6 +143,12 @@ const App: React.FC = () => {
       a.download = `curriculo-texto.txt`;
       a.click();
   };
+  
+  const handleSaveAIConfig = () => {
+      saveAIConfig(aiConfig);
+      setShowAISettings(false);
+      setToastMessage("Configurações de IA salvas!");
+  };
 
   return (
     <div className="h-screen bg-slate-100 dark:bg-slate-950 flex flex-col font-sans text-slate-800 dark:text-slate-200 overflow-hidden selection:bg-trampo-500/30">
@@ -151,6 +164,9 @@ const App: React.FC = () => {
            <button onClick={() => setShowMobilePreview(!showMobilePreview)} className="md:hidden p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium text-xs">
                {showMobilePreview ? 'Editar' : 'Ver PDF'}
            </button>
+
+           {/* AI Settings Button */}
+           <button onClick={() => setShowAISettings(true)} className={`p-2.5 rounded-xl transition-colors ${showAISettings ? 'bg-trampo-100 text-trampo-600 dark:bg-trampo-900/30 dark:text-trampo-400' : 'text-slate-500 hover:text-trampo-600 hover:bg-trampo-50 dark:hover:bg-trampo-900/10'}`} title="Configurar IA"><Bot size={20}/></button>
 
            {/* Profile Manager */}
            <div className="relative">
@@ -205,6 +221,7 @@ const App: React.FC = () => {
           <div className="absolute inset-0 z-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
 
           <div className="w-full h-full overflow-auto flex items-start justify-center p-4 md:p-12 custom-scrollbar relative z-10 pb-24">
+              {/* Theme Selector Modal (Existing) */}
               {showThemeSelector && (
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 z-50 animate-in slide-in-from-top-4 duration-300 w-[95%] max-w-4xl">
                    <div className="flex justify-between items-center mb-6">
@@ -227,6 +244,64 @@ const App: React.FC = () => {
                      ))}
                    </div>
                 </div>
+              )}
+
+              {/* AI Settings Modal (New) */}
+              {showAISettings && (
+                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-800 p-6">
+                       <div className="flex justify-between items-center mb-6">
+                          <h3 className="font-bold text-lg flex items-center gap-2 dark:text-white"><Bot size={20}/> Configuração de IA</h3>
+                          <button onClick={() => setShowAISettings(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500"><X size={18}/></button>
+                       </div>
+                       
+                       <div className="space-y-4">
+                          <div>
+                             <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Provedor</label>
+                             <div className="flex gap-2">
+                                <button onClick={() => setAiConfig({...aiConfig, provider: 'gemini'})} className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all ${aiConfig.provider === 'gemini' ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'}`}>Google Gemini</button>
+                                <button onClick={() => setAiConfig({...aiConfig, provider: 'openrouter'})} className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all ${aiConfig.provider === 'openrouter' ? 'bg-purple-50 border-purple-200 text-purple-700 dark:bg-purple-900/20 dark:border-purple-800 dark:text-purple-300' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'}`}>OpenRouter</button>
+                             </div>
+                          </div>
+
+                          <div>
+                             <label className="block text-xs font-bold uppercase text-slate-500 mb-2">API Key {aiConfig.provider === 'gemini' ? '(Opcional se configurado no servidor)' : '(Obrigatória)'}</label>
+                             <input 
+                                type="password" 
+                                value={aiConfig.apiKey} 
+                                onChange={(e) => setAiConfig({...aiConfig, apiKey: e.target.value})}
+                                placeholder={aiConfig.provider === 'gemini' ? "Padrão do sistema..." : "sk-or-..."}
+                                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-trampo-500 outline-none dark:text-white"
+                             />
+                             <p className="text-[10px] text-slate-400 mt-1">Sua chave é salva apenas no navegador.</p>
+                          </div>
+
+                          <div>
+                             <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Modelo</label>
+                             <input 
+                                type="text" 
+                                value={aiConfig.model} 
+                                onChange={(e) => setAiConfig({...aiConfig, model: e.target.value})}
+                                placeholder={aiConfig.provider === 'gemini' ? "gemini-3-flash-preview" : "google/gemini-2.0-flash-001"}
+                                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-trampo-500 outline-none dark:text-white"
+                             />
+                             {aiConfig.provider === 'openrouter' && (
+                                 <div className="flex gap-1 flex-wrap mt-2">
+                                     {['google/gemini-2.0-flash-001', 'deepseek/deepseek-chat', 'meta-llama/llama-3.3-70b-instruct', 'anthropic/claude-3.5-sonnet'].map(m => (
+                                         <button key={m} onClick={() => setAiConfig({...aiConfig, model: m})} className="text-[10px] px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 truncate max-w-[150px]">{m.split('/')[1]}</button>
+                                     ))}
+                                 </div>
+                             )}
+                          </div>
+                       </div>
+
+                       <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                          <button onClick={handleSaveAIConfig} className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-4 py-2 rounded-lg text-sm font-bold shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center gap-2">
+                             <Check size={16}/> Salvar Configuração
+                          </button>
+                       </div>
+                    </div>
+                 </div>
               )}
 
               {/* Resume Paper Container */}
