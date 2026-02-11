@@ -2,20 +2,22 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Editor } from './components/Editor/Editor';
 import { Preview } from './components/Preview/Preview';
+import { ConfirmDialog } from './components/ConfirmDialog';
 import { ResumeData, ThemeId, AIConfig } from './types';
 import { INITIAL_RESUME, THEMES } from './constants';
 import { getAIConfig, saveAIConfig } from './services/geminiService';
-import { Printer, Download, Upload, RotateCcw, Palette, Layout, Moon, Sun, Save, FileText, ZoomIn, ZoomOut, UserPlus, Menu, Eye, EyeOff, FileType, Bot, Settings2, Check, X } from 'lucide-react';
+import { Printer, Download, Upload, RotateCcw, Palette, Layout, Moon, Sun, Save, FileText, ZoomIn, ZoomOut, UserPlus, Menu, Eye, EyeOff, FileType, Bot, Settings2, Check, X, AlertCircle, Monitor, ChevronRight } from 'lucide-react';
 
 const Toast = ({ message, onClose }: { message: string, onClose: () => void }) => {
   useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]);
-  return <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl text-sm font-medium z-50 animate-slide-in flex items-center gap-2 border border-slate-700">{message}</div>;
+  return <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl text-sm font-medium z-[110] animate-slide-in flex items-center gap-2 border border-slate-700">{message}</div>;
 };
 
 const App: React.FC = () => {
   const [resumeData, setResumeData] = useState<ResumeData>(INITIAL_RESUME);
   const [activeThemeId, setActiveThemeId] = useState<ThemeId>('modern-slate');
   const [showThemeSelector, setShowThemeSelector] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<'resume' | 'cover'>('resume');
   const [zoom, setZoom] = useState(0.8);
@@ -27,6 +29,21 @@ const App: React.FC = () => {
   // AI Settings State
   const [showAISettings, setShowAISettings] = useState(false);
   const [aiConfig, setAiConfig] = useState<AIConfig>(getAIConfig());
+
+  // Confirm Dialog State
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'danger' | 'info';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'danger',
+    onConfirm: () => {},
+  });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const printRef = useRef<HTMLDivElement>(null);
@@ -66,7 +83,7 @@ const App: React.FC = () => {
       const handleGlobalKeyDown = (e: KeyboardEvent) => {
           if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
               e.preventDefault();
-              handlePrint();
+              setShowPrintModal(true);
           }
           if ((e.ctrlKey || e.metaKey) && e.key === 's') {
               e.preventDefault();
@@ -76,6 +93,14 @@ const App: React.FC = () => {
       window.addEventListener('keydown', handleGlobalKeyDown);
       return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [resumeData]);
+
+  const requestConfirm = (title: string, message: string, onConfirm: () => void, type: 'danger' | 'info' = 'danger') => {
+    setConfirmConfig({ isOpen: true, title, message, onConfirm, type });
+  };
+
+  const closeConfirm = () => {
+    setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+  };
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -100,29 +125,46 @@ const App: React.FC = () => {
   };
 
   const loadProfile = (profile: ResumeData) => {
-    if (confirm(`Carregar perfil "${profile.profileName}"? Dados não salvos na tela atual serão perdidos.`)) {
-      setResumeData(profile);
-      setShowProfileMenu(false);
-      setToastMessage("Perfil carregado.");
-    }
+    requestConfirm(
+      "Carregar Perfil?",
+      `Deseja carregar "${profile.profileName}"? Quaisquer alterações não salvas no perfil atual serão perdidas.`,
+      () => {
+        setResumeData(profile);
+        setShowProfileMenu(false);
+        setToastMessage("Perfil carregado.");
+        closeConfirm();
+      },
+      'info'
+    );
   };
 
   const deleteProfile = (id: string, e: React.MouseEvent) => {
       e.stopPropagation();
-      if(confirm("Excluir este perfil salvo?")) {
+      requestConfirm(
+        "Excluir Perfil?",
+        "Esta ação é permanente e não pode ser desfeita. Tem certeza que deseja excluir este perfil salvo?",
+        () => {
           const newProfiles = savedProfiles.filter(p => p.id !== id);
           setSavedProfiles(newProfiles);
           localStorage.setItem('trampolin_profiles', JSON.stringify(newProfiles));
-      }
+          setToastMessage("Perfil excluído.");
+          closeConfirm();
+        },
+        'danger'
+      );
   };
 
   const handlePrint = () => {
-      const oldTitle = document.title;
-      const sanitizedName = resumeData.personalInfo.fullName.replace(/[^a-z0-9]/gi, '_');
-      const sanitizedJob = resumeData.personalInfo.jobTitle.replace(/[^a-z0-9]/gi, '_');
-      document.title = `Curriculo-${sanitizedName}-${sanitizedJob}`;
-      window.print();
-      document.title = oldTitle;
+      setShowPrintModal(false);
+      // Pequeno delay para garantir que o modal feche antes do browser abrir a janela
+      setTimeout(() => {
+          const oldTitle = document.title;
+          const sanitizedName = resumeData.personalInfo.fullName.replace(/[^a-z0-9]/gi, '_');
+          const sanitizedJob = resumeData.personalInfo.jobTitle.replace(/[^a-z0-9]/gi, '_');
+          document.title = `Curriculo-${sanitizedName}-${sanitizedJob}`;
+          window.print();
+          document.title = oldTitle;
+      }, 300);
   };
 
   const handleTxtExport = () => {
@@ -148,6 +190,13 @@ const App: React.FC = () => {
       saveAIConfig(aiConfig);
       setShowAISettings(false);
       setToastMessage("Configurações de IA salvas!");
+  };
+
+  const updateSetting = (key: any, value: any) => {
+      setResumeData(prev => ({
+          ...prev,
+          settings: { ...prev.settings, [key]: value }
+      }));
   };
 
   return (
@@ -204,7 +253,7 @@ const App: React.FC = () => {
            </div>
            
            <button onClick={() => setShowThemeSelector(!showThemeSelector)} className={`p-2.5 rounded-xl transition-colors ${showThemeSelector ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300' : 'text-slate-500 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10'}`} title="Temas"><Palette size={20}/></button>
-           <button onClick={handlePrint} className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 text-white rounded-xl text-sm font-bold shadow-lg shadow-slate-900/20 dark:shadow-white/5 transition-all active:scale-95"><Printer size={18}/> <span>Baixar PDF</span></button>
+           <button onClick={() => setShowPrintModal(true)} className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 text-white rounded-xl text-sm font-bold shadow-lg shadow-slate-900/20 dark:shadow-white/5 transition-all active:scale-95"><Printer size={18}/> <span>Baixar PDF</span></button>
         </div>
       </nav>
 
@@ -212,7 +261,12 @@ const App: React.FC = () => {
       <main className="flex-1 flex overflow-hidden relative print:overflow-visible print:block print:h-auto">
         {/* Editor Sidebar */}
         <div className={`w-full md:w-[480px] lg:w-[520px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 h-full overflow-hidden print:hidden z-10 flex-shrink-0 shadow-xl transition-transform duration-300 absolute md:relative ${showMobilePreview ? '-translate-x-full md:translate-x-0' : 'translate-x-0'}`}>
-            <Editor data={resumeData} onChange={setResumeData} onShowToast={setToastMessage} />
+            <Editor 
+              data={resumeData} 
+              onChange={setResumeData} 
+              onShowToast={setToastMessage} 
+              onRequestConfirm={requestConfirm}
+            />
         </div>
 
         {/* Preview Area */}
@@ -245,6 +299,96 @@ const App: React.FC = () => {
                      ))}
                    </div>
                 </div>
+              )}
+
+              {/* Print Settings Modal (NEW) */}
+              {showPrintModal && (
+                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200 print:hidden">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
+                       <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                          <div>
+                             <h3 className="font-bold text-xl dark:text-white flex items-center gap-2"><Printer size={22} className="text-trampo-600"/> Ajustes Finais</h3>
+                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Prepare seu documento para exportação.</p>
+                          </div>
+                          <button onClick={() => setShowPrintModal(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 transition-colors"><X size={20}/></button>
+                       </div>
+                       
+                       <div className="p-6 space-y-6">
+                          {/* Alert Box */}
+                          <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 p-4 rounded-xl flex gap-3 items-start">
+                             <AlertCircle size={20} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"/>
+                             <div>
+                                <h4 className="font-bold text-sm text-amber-800 dark:text-amber-300 mb-1">Dica Importante</h4>
+                                <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+                                   Na janela de impressão do navegador, certifique-se de marcar a opção <strong className="font-bold">"Gráficos de plano de fundo"</strong> e definir as Margens como <strong className="font-bold">"Nenhuma"</strong> para evitar bordas brancas indesejadas.
+                                </p>
+                             </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                             <div>
+                                <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Tamanho do Papel</label>
+                                <div className="flex gap-2">
+                                   <button 
+                                     onClick={() => updateSetting('paperSize', 'a4')} 
+                                     className={`flex-1 py-3 px-2 rounded-xl border text-sm font-bold transition-all flex flex-col items-center gap-1 ${resumeData.settings.paperSize === 'a4' ? 'bg-trampo-50 border-trampo-500 text-trampo-700 dark:bg-trampo-900/20 dark:border-trampo-500 dark:text-trampo-300 ring-1 ring-trampo-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-trampo-300'}`}
+                                   >
+                                      <FileText size={18}/> A4
+                                   </button>
+                                   <button 
+                                     onClick={() => updateSetting('paperSize', 'letter')} 
+                                     className={`flex-1 py-3 px-2 rounded-xl border text-sm font-bold transition-all flex flex-col items-center gap-1 ${resumeData.settings.paperSize === 'letter' ? 'bg-trampo-50 border-trampo-500 text-trampo-700 dark:bg-trampo-900/20 dark:border-trampo-500 dark:text-trampo-300 ring-1 ring-trampo-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-trampo-300'}`}
+                                   >
+                                      <FileText size={18}/> Carta
+                                   </button>
+                                </div>
+                             </div>
+                             <div>
+                                <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Modo de Cor</label>
+                                <div className="flex gap-2">
+                                   <button 
+                                     onClick={() => updateSetting('grayscale', false)} 
+                                     className={`flex-1 py-3 px-2 rounded-xl border text-sm font-bold transition-all flex flex-col items-center gap-1 ${!resumeData.settings.grayscale ? 'bg-purple-50 border-purple-500 text-purple-700 dark:bg-purple-900/20 dark:border-purple-500 dark:text-purple-300 ring-1 ring-purple-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-purple-300'}`}
+                                   >
+                                      <Palette size={18}/> Colorido
+                                   </button>
+                                   <button 
+                                     onClick={() => updateSetting('grayscale', true)} 
+                                     className={`flex-1 py-3 px-2 rounded-xl border text-sm font-bold transition-all flex flex-col items-center gap-1 ${resumeData.settings.grayscale ? 'bg-slate-100 border-slate-500 text-slate-800 dark:bg-slate-700 dark:border-slate-500 dark:text-white ring-1 ring-slate-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-400'}`}
+                                   >
+                                      <Monitor size={18}/> P&B
+                                   </button>
+                                </div>
+                             </div>
+                          </div>
+                          
+                          <div>
+                             <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Ajuste de Margem (Escala)</label>
+                             <input 
+                               type="range" 
+                               min="0.5" 
+                               max="1.5" 
+                               step="0.1" 
+                               value={resumeData.settings.marginScale} 
+                               onChange={(e) => updateSetting('marginScale', parseFloat(e.target.value))}
+                               className="w-full accent-trampo-600 h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                             />
+                             <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-mono">
+                                <span>Compacto</span>
+                                <span>Padrão</span>
+                                <span>Espaçoso</span>
+                             </div>
+                          </div>
+                       </div>
+
+                       <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
+                          <button onClick={() => setShowPrintModal(false)} className="px-5 py-2.5 rounded-xl font-medium text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm border border-transparent hover:border-slate-200 dark:hover:border-slate-600 transition-all text-sm">Cancelar</button>
+                          <button onClick={handlePrint} className="px-6 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center gap-2 text-sm">
+                             Imprimir Agora <ChevronRight size={16}/>
+                          </button>
+                       </div>
+                    </div>
+                 </div>
               )}
 
               {/* AI Settings Modal (New) */}
@@ -331,13 +475,24 @@ const App: React.FC = () => {
              <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
              <button onClick={() => setZoom(window.innerWidth < 768 ? 0.45 : 0.8)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-colors" title="Resetar"><RotateCcw size={16}/></button>
              <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 md:hidden"></div>
-             <button onClick={handlePrint} className="md:hidden p-2 bg-slate-900 text-white rounded-xl shadow-lg"><Printer size={18}/></button>
+             <button onClick={() => setShowPrintModal(true)} className="md:hidden p-2 bg-slate-900 text-white rounded-xl shadow-lg"><Printer size={18}/></button>
           </div>
 
         </div>
       </main>
       
+      {/* Toast */}
       {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
+      
+      {/* Global Confirm Dialog */}
+      <ConfirmDialog 
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        onConfirm={() => { confirmConfig.onConfirm(); closeConfirm(); }}
+        onCancel={closeConfirm}
+        type={confirmConfig.type}
+      />
     </div>
   );
 };

@@ -9,6 +9,7 @@ interface EditorProps {
   data: ResumeData;
   onChange: (data: ResumeData) => void;
   onShowToast: (msg: string) => void;
+  onRequestConfirm: (title: string, message: string, onConfirm: () => void, type?: 'danger' | 'info') => void;
 }
 
 const COLOR_PRESETS = [
@@ -115,7 +116,7 @@ const Section = ({ title, icon: Icon, children, isOpen, onToggle, isVisible, onV
       </div>
       <div className="flex items-center gap-1">
         {onClear && (
-          <button onClick={(e) => { e.stopPropagation(); if(confirm('Tem certeza que deseja limpar todos os itens desta seção?')) onClear(); }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Limpar Seção">
+          <button onClick={(e) => { e.stopPropagation(); onClear(); }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Limpar Seção">
             <Eraser size={16} />
           </button>
         )}
@@ -155,7 +156,7 @@ const Input = ({ label, value, onChange, type = "text", placeholder = "", step, 
   </div>
 );
 
-export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) => {
+export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onRequestConfirm }) => {
   const [openSection, setOpenSection] = useState<string>('personal');
   const [loadingAI, setLoadingAI] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'resume' | 'cover' | 'ats' | 'tools'>('resume');
@@ -329,18 +330,28 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
   };
 
   const handleReset = () => {
-    if(confirm('ATENÇÃO: Isso apagará TODOS os dados atuais e restaurará o modelo padrão. Continuar?')) {
-      handleChangeWithHistory(INITIAL_RESUME);
-      onShowToast("Currículo reiniciado.");
-    }
+    onRequestConfirm(
+      "Resetar Currículo?",
+      "Isso apagará TODOS os dados atuais e restaurará o modelo padrão. Deseja continuar?",
+      () => {
+        handleChangeWithHistory(INITIAL_RESUME);
+        onShowToast("Currículo reiniciado.");
+      },
+      'danger'
+    );
   };
 
   const loadExample = (example: ResumeData) => {
-      if(confirm('Carregar exemplo? Seus dados atuais não salvos serão perdidos.')) {
+      onRequestConfirm(
+        "Carregar Exemplo?",
+        "Ao carregar este exemplo, seus dados atuais não salvos serão perdidos.",
+        () => {
           handleChangeWithHistory(example);
           onShowToast("Exemplo carregado!");
           setShowExamples(false);
-      }
+        },
+        'info'
+      );
   };
 
   // --- Actions ---
@@ -401,41 +412,52 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
   };
 
   const handleTranslate = async (lang: string) => {
-     if (!confirm(`Isso irá traduzir todos os textos do currículo para ${lang}. O processo pode levar alguns segundos. Continuar?`)) return;
-     setLoadingAI('translating');
-     const newData = { ...data };
-     if (newData.personalInfo.summary) newData.personalInfo.summary = await translateText(newData.personalInfo.summary, lang);
-     for (const exp of newData.experience) {
-       if (exp.role) exp.role = await translateText(exp.role, lang);
-       if (exp.description) exp.description = await translateText(exp.description, lang);
-     }
-     handleChangeWithHistory(newData);
-     setLoadingAI(null);
-     onShowToast(`Tradução para ${lang} concluída.`);
+     onRequestConfirm(
+        `Traduzir para ${lang}?`,
+        `A IA irá traduzir todos os textos do currículo. O processo pode levar alguns segundos.`,
+        async () => {
+            setLoadingAI('translating');
+            const newData = { ...data };
+            if (newData.personalInfo.summary) newData.personalInfo.summary = await translateText(newData.personalInfo.summary, lang);
+            for (const exp of newData.experience) {
+            if (exp.role) exp.role = await translateText(exp.role, lang);
+            if (exp.description) exp.description = await translateText(exp.description, lang);
+            }
+            handleChangeWithHistory(newData);
+            setLoadingAI(null);
+            onShowToast(`Tradução para ${lang} concluída.`);
+        },
+        'info'
+     );
   };
 
   const handleConvertToEditor = async () => {
       if (!atsFile) return;
-      if (!confirm("Isso irá sobrescrever os dados atuais do Editor com as informações extraídas do PDF. Deseja continuar?")) return;
-      
-      setLoadingAI('convert-pdf');
-      const extractedData = await extractResumeFromPdf(atsFile);
-      
-      if (extractedData) {
-          handleChangeWithHistory({
-              ...INITIAL_RESUME,
-              personalInfo: { ...INITIAL_RESUME.personalInfo, ...extractedData.personalInfo },
-              experience: extractedData.experience || [],
-              education: extractedData.education || [],
-              skills: extractedData.skills || [],
-              languages: extractedData.languages || [],
-          });
-          onShowToast("Currículo convertido para o Editor com sucesso!");
-          setActiveTab('resume');
-      } else {
-          onShowToast("Erro ao converter PDF. Tente novamente.");
-      }
-      setLoadingAI(null);
+      onRequestConfirm(
+        "Converter PDF para Editor?",
+        "Isso irá sobrescrever os dados atuais do Editor com as informações extraídas do PDF. Recomendamos fazer um backup antes.",
+        async () => {
+            setLoadingAI('convert-pdf');
+            const extractedData = await extractResumeFromPdf(atsFile);
+            
+            if (extractedData) {
+                handleChangeWithHistory({
+                    ...INITIAL_RESUME,
+                    personalInfo: { ...INITIAL_RESUME.personalInfo, ...extractedData.personalInfo },
+                    experience: extractedData.experience || [],
+                    education: extractedData.education || [],
+                    skills: extractedData.skills || [],
+                    languages: extractedData.languages || [],
+                });
+                onShowToast("Currículo convertido para o Editor com sucesso!");
+                setActiveTab('resume');
+            } else {
+                onShowToast("Erro ao converter PDF. Tente novamente.");
+            }
+            setLoadingAI(null);
+        },
+        'danger'
+      );
   };
 
   const handleRunAtsAnalysis = async () => {
@@ -464,14 +486,27 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
   };
 
   const removeItem = (listName: string, index: number) => {
-     if (!confirm("Remover este item?")) return;
-     const list = [...(data as any)[listName]];
-     handleChangeWithHistory({ ...data, [listName]: list.filter((_, i) => i !== index) });
+     onRequestConfirm(
+        "Remover Item?",
+        "Deseja realmente remover este item da lista?",
+        () => {
+            const list = [...(data as any)[listName]];
+            handleChangeWithHistory({ ...data, [listName]: list.filter((_, i) => i !== index) });
+        },
+        'danger'
+     );
   };
   
   const clearList = (listName: string) => {
-    handleChangeWithHistory({ ...data, [listName]: [] });
-    onShowToast("Seção limpa.");
+    onRequestConfirm(
+        "Limpar Seção?",
+        `Tem certeza que deseja limpar todos os itens da seção ${listName}?`,
+        () => {
+            handleChangeWithHistory({ ...data, [listName]: [] });
+            onShowToast("Seção limpa.");
+        },
+        'danger'
+    );
   };
 
   const duplicateItem = (listName: string, index: number) => {
