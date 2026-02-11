@@ -23,7 +23,7 @@ export const saveAIConfig = (config: AIConfig) => {
 };
 
 // --- CORE LLM FUNCTION ---
-const callLLM = async (prompt: string, systemInstruction?: string, jsonMode: boolean = false): Promise<string> => {
+const callLLM = async (prompt: string | any[], systemInstruction?: string, jsonMode: boolean = false): Promise<string> => {
     const config = getAIConfig();
 
     // 1. OPENROUTER HANDLER
@@ -71,10 +71,21 @@ const callLLM = async (prompt: string, systemInstruction?: string, jsonMode: boo
         const ai = new GoogleGenAI({ apiKey });
         const modelName = config.model || DEFAULT_GEMINI_MODEL;
 
+        // Gemini SDK expects string or array of parts
+        let contents: any = prompt;
+        if (typeof prompt === 'string') {
+            contents = prompt;
+        } else {
+            // Converts OpenRouter/OpenAI multimodal format to Gemini if passed as array
+            // This basic conversion handles text and simple matches, but usually Gemini logic is handled separately in analyzeJobMatch
+            // For simple string prompts passed as array:
+             contents = { parts: prompt.map((p: any) => p.text ? { text: p.text } : { text: JSON.stringify(p) }) };
+        }
+
         try {
             const response = await ai.models.generateContent({
                 model: modelName,
-                contents: prompt,
+                contents: contents,
                 config: {
                     systemInstruction: systemInstruction,
                     responseMimeType: jsonMode ? "application/json" : "text/plain"
@@ -257,8 +268,28 @@ export const analyzeJobMatch = async (resumeInput: string | { mimeType: string, 
   if (typeof resumeInput === 'string') {
       resumeTextContent = resumeInput;
   } else {
-      // Se estiver usando OpenRouter com PDF, isso é complexo sem OCR prévio ou modelo Vision específico.
-      return { score: 0, feedback: ["A análise de PDF direto só está disponível com o provedor Google Gemini padrão no momento."], missingKeywords: [] };
+      // Tentar enviar como multimodal para OpenRouter
+      const system = `Aja como um sistema ATS (Applicant Tracking System).
+      Compare o currículo (anexo ou texto) com a vaga fornecida.
+      Retorne APENAS JSON: { "score": (número 0-100), "feedback": ["..."], "missingKeywords": ["..."] }`;
+
+      const prompt = [
+          { type: "text", text: `MEU CURRÍCULO (Veja o anexo da imagem/PDF)\n\nDESCRIÇÃO DA VAGA:\n${jobDescription.substring(0, 5000)}` },
+          {
+              type: "image_url",
+              image_url: {
+                  url: `data:${resumeInput.mimeType};base64,${resumeInput.data}`
+              }
+          }
+      ];
+
+      try {
+          // Passamos true para jsonMode
+          const response = await callLLM(prompt, system, true);
+          return JSON.parse(cleanJSON(response));
+      } catch (error) {
+          return { score: 0, feedback: ["Erro: O modelo selecionado no OpenRouter pode não suportar leitura de PDF/Imagens (Vision). Tente usar um modelo como 'google/gemini-pro-1.5' ou 'anthropic/claude-3.5-sonnet' no OpenRouter, ou use a chave direta do Gemini."], missingKeywords: [] };
+      }
   }
 
   try {
@@ -280,7 +311,7 @@ export const extractResumeFromPdf = async (fileData: { mimeType: string, data: s
 
     // Apenas Gemini suporta PDF nativo no SDK de forma fácil nesta implementação
     if (config.provider !== 'gemini') {
-        alert("A extração de PDF requer o provedor Google Gemini.");
+        alert("A extração de PDF requer o provedor Google Gemini nativo para melhor precisão.");
         return null;
     }
 

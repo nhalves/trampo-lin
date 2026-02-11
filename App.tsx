@@ -151,65 +151,8 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="h-screen bg-slate-100 dark:bg-slate-950 flex flex-col font-sans text-slate-800 dark:text-slate-200 overflow-hidden selection:bg-trampo-500/30">
+    <div className="h-screen bg-slate-100 dark:bg-slate-950 flex flex-col font-sans text-slate-800 dark:text-slate-200 overflow-hidden selection:bg-trampo-500/30 print:h-auto print:overflow-visible">
       
-      {/* 
-         CRITICAL: Global Print Styles 
-         This resets the app layout during print to ensure only the resume paper is visible and correctly sized.
-      */}
-      <style>{`
-        @media print {
-          @page { margin: 0; size: auto; }
-          
-          /* 1. Reset Body and Root */
-          body, #root, .h-screen, main {
-            background-color: white !important;
-            height: auto !important;
-            min-height: auto !important;
-            overflow: visible !important;
-            display: block !important;
-            position: static !important;
-          }
-
-          /* 2. Hide User Interface Elements */
-          nav, 
-          .print\\:hidden,
-          button, 
-          .preview-controls,
-          .theme-selector-modal,
-          .ai-settings-modal {
-            display: none !important;
-          }
-
-          /* 3. Force Resume Paper Visibility and Positioning */
-          #resume-paper {
-            display: block !important;
-            visibility: visible !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            transform: none !important; /* Disables the Zoom scale */
-            box-shadow: none !important;
-            width: 210mm !important; /* A4 Width */
-            z-index: 9999 !important;
-            background-color: white !important;
-          }
-          
-          /* Letter size adjustment if needed */
-          #resume-paper[data-size="letter"] {
-             width: 215.9mm !important;
-          }
-
-          /* 4. Color Correction for Print (Override Dark Mode) */
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-        }
-      `}</style>
-
       {/* Navbar */}
       <nav className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 lg:px-6 shadow-sm z-50 print:hidden flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -281,7 +224,7 @@ const App: React.FC = () => {
           <div className="w-full h-full overflow-auto flex items-start justify-center p-4 md:p-12 custom-scrollbar relative z-10 pb-24 print:p-0 print:pb-0 print:overflow-visible print:block print:h-auto">
               {/* Theme Selector Modal (Existing) */}
               {showThemeSelector && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 z-50 animate-in slide-in-from-top-4 duration-300 w-[95%] max-w-4xl theme-selector-modal">
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 z-50 animate-in slide-in-from-top-4 duration-300 w-[95%] max-w-4xl theme-selector-modal print:hidden">
                    <div className="flex justify-between items-center mb-6">
                       <div>
                         <h3 className="font-bold text-lg dark:text-white">Galeria de Temas</h3>
@@ -306,7 +249,7 @@ const App: React.FC = () => {
 
               {/* AI Settings Modal (New) */}
               {showAISettings && (
-                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200 ai-settings-modal">
+                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200 ai-settings-modal print:hidden">
                     <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-800 p-6">
                        <div className="flex justify-between items-center mb-6">
                           <h3 className="font-bold text-lg flex items-center gap-2 dark:text-white"><Bot size={20}/> Configuração de IA</h3>
@@ -367,7 +310,7 @@ const App: React.FC = () => {
                 id="resume-paper"
                 ref={printRef} 
                 data-size={resumeData.settings.paperSize}
-                className={`relative flex-shrink-0 bg-white shadow-2xl transition-transform duration-200 origin-top`}
+                className={`relative flex-shrink-0 bg-white shadow-2xl transition-transform duration-200 origin-top print:shadow-none print:m-0 print:absolute print:top-0 print:left-0 print:w-full print:z-50 print:transform-none`}
                 style={{
                     width: resumeData.settings.paperSize === 'letter' ? '215.9mm' : '210mm',
                     minHeight: resumeData.settings.paperSize === 'letter' ? '279.4mm' : '297mm',
