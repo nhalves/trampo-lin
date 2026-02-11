@@ -175,16 +175,14 @@ export interface AIConfig {
 
 export type ThemeId = 
   | 'modern-slate'
-  | 'classic-serif'
-  | 'minimal-mono'
-  | 'executive-blue'
-  | 'creative-coral'
-  | 'ats-clean'
-  | 'timeline-pro'
-  | 'swiss-grid'
-  | 'tech-dark'
-  | 'geometric-pop'
-  | 'studio-minimal';
+  | 'executive-gold'
+  | 'tech-lead-dark'
+  | 'creative-blob'
+  | 'swiss-international'
+  | 'startup-pop'
+  | 'ivy-league'
+  | 'mono-hacker'
+  | 'timeline-pro';
 
 export interface ThemeConfig {
   id: ThemeId;

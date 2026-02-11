@@ -64,11 +64,8 @@ const callLLM = async (prompt: string | any[], systemInstruction?: string, jsonM
 
     // 2. GEMINI HANDLER (DEFAULT)
     else {
-        // Prioriza a chave do localStorage, senão usa a do env
-        const apiKey = config.apiKey || process.env.API_KEY;
-        if (!apiKey) throw new Error("API Key do Google Gemini não encontrada.");
-
-        const ai = new GoogleGenAI({ apiKey });
+        // Use process.env.API_KEY exclusively for Gemini as per guidelines
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const modelName = config.model || DEFAULT_GEMINI_MODEL;
 
         // Gemini SDK expects string or array of parts
@@ -243,9 +240,7 @@ export const analyzeJobMatch = async (resumeInput: string | { mimeType: string, 
   
   // Se for Gemini e tivermos arquivo binário, usamos o SDK nativo que lida melhor com Files
   if (config.provider === 'gemini' && typeof resumeInput !== 'string') {
-      const apiKey = config.apiKey || process.env.API_KEY;
-      if(!apiKey) return null;
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       
       try {
         const response = await ai.models.generateContent({
@@ -315,11 +310,8 @@ export const extractResumeFromPdf = async (fileData: { mimeType: string, data: s
         return null;
     }
 
-    const apiKey = config.apiKey || process.env.API_KEY;
-    if(!apiKey) return null;
-    
     try {
-        const ai = new GoogleGenAI({ apiKey });
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const prompt = `Extraia os dados do currículo para JSON: { personalInfo: {fullName, jobTitle, email, phone, address, linkedin, summary}, experience: [{role, company, startDate, endDate, description}], skills: [{name, level}] }. Traduza para PT-BR.`;
         
         const response = await ai.models.generateContent({

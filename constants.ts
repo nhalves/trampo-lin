@@ -43,7 +43,7 @@ export const INITIAL_RESUME: ResumeData = {
     fontScale: 1,
     spacingScale: 1,
     marginScale: 1,
-    lineHeight: 1.5,
+    lineHeight: 1.4,
     sectionOrder: ['experience', 'education', 'skills', 'projects', 'certifications', 'publications', 'languages', 'volunteer', 'interests', 'awards', 'references', 'custom'],
     visibleSections: {
       experience: true,
@@ -142,87 +142,73 @@ export const EXAMPLE_PERSONAS: ResumeData[] = [
 ];
 
 export const THEMES: ThemeConfig[] = [
-  // --- NOVOS TEMAS DIFERENCIADOS ---
-  {
-    id: 'timeline-pro',
-    name: 'Timeline Pro',
-    description: 'Conecta suas experiências com uma linha do tempo elegante.',
-    colors: { primary: '#2563eb', secondary: '#64748b', text: '#334155', bg: '#ffffff', accent: '#3b82f6' },
-    layout: 'sidebar-left'
-  },
-  {
-    id: 'swiss-grid',
-    name: 'Swiss Grid',
-    description: 'Tipografia forte, inspirado no Estilo Internacional. Grade rígida.',
-    colors: { primary: '#dc2626', secondary: '#171717', text: '#000000', bg: '#ffffff', accent: '#dc2626' },
-    layout: 'grid-complex'
-  },
-  {
-    id: 'geometric-pop',
-    name: 'Geometric Pop',
-    description: 'Formas sutis ao fundo para um visual criativo e moderno.',
-    colors: { primary: '#4f46e5', secondary: '#818cf8', text: '#312e81', bg: '#eef2ff', accent: '#6366f1' },
-    layout: 'sidebar-right',
-    gradient: 'linear-gradient(135deg, #4f46e5 0%, #818cf8 100%)'
-  },
-  {
-    id: 'studio-minimal',
-    name: 'Studio Minimal',
-    description: 'Absolutamente limpo. Muito espaço em branco. Sofisticado.',
-    colors: { primary: '#000000', secondary: '#737373', text: '#171717', bg: '#ffffff', accent: '#404040' },
-    layout: 'single-column'
-  },
-  {
-    id: 'tech-dark',
-    name: 'Tech Terminal',
-    description: 'Estilo inspirado em editores de código. Fundo escuro.',
-    colors: { primary: '#4ade80', secondary: '#94a3b8', text: '#e2e8f0', bg: '#0f172a', accent: '#22c55e' },
-    layout: 'single-column'
-  },
-
-  // --- CLÁSSICOS ---
+  // --- TEMAS PREMIUM ---
   {
     id: 'modern-slate',
     name: 'Moderno Slate',
-    description: 'O padrão da indústria. Limpo e eficaz.',
-    colors: { primary: '#334155', secondary: '#94a3b8', text: '#1e293b', bg: '#ffffff', accent: '#3b82f6' },
+    description: 'Equilibrado e seguro. O favorito dos recrutadores.',
+    colors: { primary: '#334155', secondary: '#64748b', text: '#1e293b', bg: '#ffffff', accent: '#3b82f6' },
     layout: 'sidebar-left'
   },
   {
-    id: 'ats-clean',
-    name: 'ATS Friendly',
-    description: 'Otimizado para leitura de robôs. Sem colunas.',
-    colors: { primary: '#000000', secondary: '#4b5563', text: '#000000', bg: '#ffffff', accent: '#000000' },
+    id: 'executive-gold',
+    name: 'The CEO',
+    description: 'Minimalismo de alto nível. Muita área branca, fontes serifadas e elegância.',
+    colors: { primary: '#171717', secondary: '#404040', text: '#262626', bg: '#ffffff', accent: '#d4af37' }, // Dourado sutil
+    layout: 'single-column',
+    fonts: { header: 'font-serif', body: 'font-sans' }
+  },
+  {
+    id: 'tech-lead-dark',
+    name: 'Tech Lead',
+    description: 'Barra lateral escura com alto contraste. Impactante e moderno.',
+    colors: { primary: '#0f172a', secondary: '#334155', text: '#334155', bg: '#ffffff', accent: '#22d3ee' }, // Cyan accent
+    layout: 'sidebar-left'
+  },
+  {
+    id: 'creative-blob',
+    name: 'Creative Studio',
+    description: 'Formas orgânicas no cabeçalho. Para designers e criativos.',
+    colors: { primary: '#4f46e5', secondary: '#818cf8', text: '#312e81', bg: '#ffffff', accent: '#c7d2fe' },
+    layout: 'banner',
+    gradient: 'linear-gradient(120deg, #4f46e5 0%, #c026d3 100%)'
+  },
+  {
+    id: 'swiss-international',
+    name: 'Swiss Grid',
+    description: 'Tipografia ousada, linhas fortes, layout de revista.',
+    colors: { primary: '#000000', secondary: '#171717', text: '#000000', bg: '#ffffff', accent: '#ef4444' }, // Vermelho suíço
+    layout: 'grid-complex'
+  },
+  {
+    id: 'startup-pop',
+    name: 'Startup Pop',
+    description: 'Jovem, dinâmico, cantos arredondados e cor vibrante.',
+    colors: { primary: '#2563eb', secondary: '#60a5fa', text: '#1e293b', bg: '#eff6ff', accent: '#3b82f6' },
     layout: 'single-column'
   },
   {
-    id: 'classic-serif',
-    name: 'Clássico Serif',
-    description: 'Tradicional, ideal para áreas jurídicas e acadêmicas.',
-    colors: { primary: '#111827', secondary: '#4b5563', text: '#000000', bg: '#ffffff', accent: '#000000' },
-    layout: 'stacked'
+    id: 'ivy-league',
+    name: 'Ivy League',
+    description: 'Tradicional, acadêmico, bordas duplas e seriedade.',
+    colors: { primary: '#451a03', secondary: '#78350f', text: '#292524', bg: '#fffbeb', accent: '#92400e' }, // Tons de marrom/creme
+    layout: 'stacked',
+    fonts: { header: 'font-serif', body: 'font-serif' }
   },
   {
-    id: 'executive-blue',
-    name: 'Executivo',
-    description: 'Banner no topo. Autoridade e confiança.',
-    colors: { primary: '#1e3a8a', secondary: '#60a5fa', text: '#1e293b', bg: '#eff6ff', accent: '#2563eb' },
-    layout: 'banner',
-    gradient: 'linear-gradient(to right, #1e3a8a, #2563eb)'
+    id: 'mono-hacker',
+    name: 'System.Out',
+    description: 'Estilo terminal/código. Fonte monoespaçada.',
+    colors: { primary: '#16a34a', secondary: '#86efac', text: '#14532d', bg: '#f0fdf4', accent: '#15803d' },
+    layout: 'single-column',
+    fonts: { header: 'font-mono', body: 'font-mono' }
   },
   {
-    id: 'creative-coral',
-    name: 'Criativo',
-    description: 'Ousado e vibrante para designers.',
-    colors: { primary: '#be123c', secondary: '#fb7185', text: '#374151', bg: '#fff1f2', accent: '#f43f5e' },
+    id: 'timeline-pro',
+    name: 'Timeline Pro',
+    description: 'Conecta suas experiências com uma linha do tempo visual.',
+    colors: { primary: '#0ea5e9', secondary: '#7dd3fc', text: '#0c4a6e', bg: '#ffffff', accent: '#0284c7' },
     layout: 'sidebar-right'
-  },
-  {
-    id: 'minimal-mono',
-    name: 'Dev Mono',
-    description: 'Fonte monoespaçada. Estilo técnico.',
-    colors: { primary: '#404040', secondary: '#a3a3a3', text: '#171717', bg: '#ffffff', accent: '#737373' },
-    layout: 'stacked'
   }
 ];
 

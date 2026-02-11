@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { ResumeData, ThemeConfig, ResumeSettings, Skill } from '../../types';
-import { MapPin, Mail, Phone, Linkedin, Globe, Github, Twitter, ExternalLink, Dribbble, Youtube, Facebook, Instagram, Hash, Star, Code, Heart, PenTool, Award, BookOpen, UserCheck, Zap, Feather } from 'lucide-react';
+import { MapPin, Mail, Phone, Linkedin, Globe, Github, Twitter, ExternalLink, Dribbble, Youtube, Facebook, Instagram, Hash, Star, Code, Heart, PenTool, Award, BookOpen, Zap, Briefcase, GraduationCap } from 'lucide-react';
 
 interface PreviewProps {
   data: ResumeData;
@@ -9,117 +9,25 @@ interface PreviewProps {
   mode?: 'resume' | 'cover';
 }
 
-// --- LÓGICA DE CONTRASTE (Nova) ---
-// Retorna 'black' ou 'white' dependendo da cor de fundo (hex)
+// --- UTILS ---
 const getContrastColor = (hexcolor: string) => {
-    // Remove o hash se existir
+    if (!hexcolor) return '#000';
     const hex = hexcolor.replace("#", "");
-    // Converte para RGB
     const r = parseInt(hex.substr(0, 2), 16);
     const g = parseInt(hex.substr(2, 2), 16);
     const b = parseInt(hex.substr(4, 2), 16);
-    // Cálculo de luminância YIQ
     const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-    return (yiq >= 128) ? '#1f2937' : '#ffffff'; // Retorna cinza escuro ou branco
+    return (yiq >= 128) ? '#0f172a' : '#ffffff';
 };
 
-// Verifica se a cor é muito clara (útil para bordas e textos coloridos)
 const isColorTooLight = (hexcolor: string) => {
+    if (!hexcolor) return true;
     const hex = hexcolor.replace("#", "");
     const r = parseInt(hex.substr(0, 2), 16);
     const g = parseInt(hex.substr(2, 2), 16);
     const b = parseInt(hex.substr(4, 2), 16);
     const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-    return yiq >= 200; // Limite alto para considerar "muito claro"
-};
-
-const MarkdownText = ({ text }: { text: string }) => {
-    if (!text) return null;
-    
-    const lines = text.split('\n');
-    return (
-        <>
-            {lines.map((line, i) => {
-                const parts = line.split(/(\*\*.*?\*\*|\*.*?\*)/g);
-                const renderedLine = parts.map((part, j) => {
-                    if (part.startsWith('**') && part.endsWith('**')) {
-                        return <strong key={j}>{part.slice(2, -2)}</strong>;
-                    }
-                    if (part.startsWith('*') && part.endsWith('*')) {
-                        return <em key={j}>{part.slice(1, -1)}</em>;
-                    }
-                    return part;
-                });
-                return <span key={i} className="block min-h-[1em]">{renderedLine}</span>;
-            })}
-        </>
-    );
-};
-
-const SkillItem: React.FC<{ skill: Skill; settings: ResumeSettings; primary: string; accent: string; dark?: boolean }> = ({ skill, settings, primary, accent, dark }) => {
-  if (settings.skillStyle === 'hidden') {
-    return <span className={`text-sm font-medium mr-3 mb-1 inline-block print:text-black ${dark ? 'text-slate-300' : 'text-[var(--text)]'}`}>• {skill.name}</span>;
-  }
-  
-  // Tag Style: Ajuste de contraste inteligente
-  if (settings.skillStyle === 'tags') {
-      const isLight = isColorTooLight(primary);
-      // Se a cor primária for muito clara e estivermos no modo claro, escurecemos o texto
-      const textColor = (!dark && isLight) ? '#334155' : (dark ? '#e2e8f0' : primary);
-      const borderColor = (!dark && isLight) ? '#cbd5e1' : (dark ? accent : 'transparent');
-      
-      return <span className={`px-2 py-1 rounded text-xs font-medium inline-block border break-inside-avoid print:print-color-adjust-exact print:text-black print:border-slate-300 print:bg-white`} style={{ backgroundColor: dark ? 'transparent' : `${accent}1a`, color: textColor, borderColor: borderColor }}>{skill.name}</span>;
-  }
-
-  if (settings.skillStyle === 'bar') {
-    return (
-      <div className="mb-2 w-full break-inside-avoid">
-        <div className={`flex justify-between text-xs mb-0.5 print:text-black ${dark ? 'text-slate-300' : 'text-slate-700'}`}><span>{skill.name}</span></div>
-        <div className={`h-1.5 w-full rounded-full overflow-hidden print:border print:border-slate-300 ${dark ? 'bg-slate-700' : 'bg-slate-200'}`}>
-          <div className="h-full print:print-color-adjust-exact" style={{ width: `${skill.level * 20}%`, backgroundColor: primary }}></div>
-        </div>
-      </div>
-    );
-  }
-  if (settings.skillStyle === 'dots') {
-      return (
-        <div className={`flex justify-between items-center mb-1 text-xs print:text-black ${dark ? 'text-slate-300' : 'text-slate-700'} break-inside-avoid`}>
-          <span>{skill.name}</span>
-          <div className="flex gap-1">
-            {[1,2,3,4,5].map(i => <div key={i} className={`w-2 h-2 rounded-full print:print-color-adjust-exact ${i <= skill.level ? '' : (dark ? 'bg-slate-700' : 'bg-slate-200')}`} style={{ backgroundColor: i <= skill.level ? accent : undefined }}></div>)}
-          </div>
-        </div>
-      );
-  }
-  if (settings.skillStyle === 'circles') {
-      return (
-          <div className="flex flex-col items-center justify-center text-center w-20 mb-3 break-inside-avoid">
-              <div className="relative w-12 h-12 mb-1 flex items-center justify-center">
-                  <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                      <path className={`${dark ? 'text-slate-700' : 'text-slate-200'}`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
-                      <path className="print:print-color-adjust-exact" style={{ color: primary }} strokeDasharray={`${skill.level * 20}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
-                  </svg>
-                  <span className="absolute text-[10px] font-bold print:text-black" style={{color: dark ? '#fff' : 'inherit'}}>{skill.level}</span>
-              </div>
-              <span className={`text-[10px] leading-tight print:text-black ${dark ? 'text-slate-300' : 'text-slate-700'}`}>{skill.name}</span>
-          </div>
-      );
-  }
-  return null;
-};
-
-const getIconForUrl = (url: string, defaultIcon: any) => {
-    if (!url) return defaultIcon;
-    const lower = url.toLowerCase();
-    if (lower.includes('github')) return Github;
-    if (lower.includes('linkedin')) return Linkedin;
-    if (lower.includes('twitter') || lower.includes('x.com')) return Twitter;
-    if (lower.includes('dribbble')) return Dribbble;
-    if (lower.includes('behance')) return Hash; 
-    if (lower.includes('youtube')) return Youtube;
-    if (lower.includes('facebook')) return Facebook;
-    if (lower.includes('instagram')) return Instagram;
-    return defaultIcon;
+    return yiq >= 200;
 };
 
 const sanitizeLink = (link: string) => {
@@ -129,568 +37,489 @@ const sanitizeLink = (link: string) => {
     return `https://${link}`;
 };
 
-const ContactItem = ({ icon: Icon, text, link, primary, className, privacyMode, contrastText }: { icon: any, text: string, link?: string, primary: string, className?: string, privacyMode?: boolean, contrastText?: string }) => {
-  if (!text) return null;
-  const DisplayIcon = link ? getIconForUrl(link, Icon) : Icon;
-  const safeLink = link ? sanitizeLink(link) : undefined;
-  
-  // Se contrastText for definido, usamos ele (para sidebars coloridas), senão tenta a cor primária, mas com fallback para preto na impressão
-  const iconStyle = { color: contrastText || primary };
-
-  return (
-    <div className={`flex items-center gap-1.5 mb-1 text-xs ${className} break-inside-avoid print:text-black`} style={{ color: contrastText }}>
-      <DisplayIcon size={12} className="flex-shrink-0 print:text-black" style={iconStyle} />
-      {safeLink ? (
-          <a href={safeLink} target="_blank" rel="noreferrer" className={`hover:underline truncate print:text-black print:no-underline ${privacyMode ? 'blur-[3px] select-none print:blur-none' : ''}`} style={{color: 'inherit'}}>{text}</a>
-      ) : (
-          <span className={`truncate print:text-black ${privacyMode ? 'blur-[3px] select-none print:blur-none' : ''}`}>{text}</span>
-      )}
-    </div>
-  );
+const MarkdownText = ({ text, className }: { text: string, className?: string }) => {
+    if (!text) return null;
+    const lines = text.split('\n');
+    return (
+        <div className={className}>
+            {lines.map((line, i) => {
+                // Parse bold (**text**) and italic (*text*)
+                const parts = line.split(/(\*\*.*?\*\*|\*.*?\*)/g);
+                const renderedLine = parts.map((part, j) => {
+                    if (part.startsWith('**') && part.endsWith('**')) return <strong key={j}>{part.slice(2, -2)}</strong>;
+                    if (part.startsWith('*') && part.endsWith('*')) return <em key={j}>{part.slice(1, -1)}</em>;
+                    return part;
+                });
+                
+                // Handle Lists specifically
+                if (line.trim().startsWith('•') || line.trim().startsWith('-')) {
+                     return <div key={i} className="flex gap-2 ml-1 mb-0.5"><span className="opacity-70">•</span><span className="flex-1">{renderedLine.slice(1)}</span></div>;
+                }
+                
+                return <span key={i} className="block min-h-[1em] mb-0.5">{renderedLine}</span>;
+            })}
+        </div>
+    );
 };
 
-const SectionTitle = ({ title, font, accent, primary, style = 'simple', dark, gradient }: { title: string, font: string, accent: string, primary: string, style?: string, dark?: boolean, gradient?: string }) => {
-  let classes = `text-sm font-bold uppercase tracking-wider mb-4 pb-1 ${font} break-after-avoid break-inside-avoid print:text-black `;
-  
-  // Safe color for printing if primary is light
-  const printSafeColor = isColorTooLight(primary) ? '#000' : primary;
-  
-  let inlineStyles: React.CSSProperties = { color: dark ? '#fff' : primary };
-  
-  if (style === 'underline') {
-      inlineStyles.borderBottom = `2px solid ${accent}`;
-  } else if (style === 'box') {
-      classes += " px-2 py-1 inline-block print:print-color-adjust-exact";
-      // Ensure high contrast text on box
-      const boxTextColor = getContrastColor(accent);
-      inlineStyles.backgroundColor = accent;
-      inlineStyles.color = boxTextColor;
-  } else if (style === 'left-bar') {
-      classes += " pl-3 border-l-4";
-      inlineStyles.borderColor = accent;
-  } else if (style === 'gradient' && gradient) {
-      inlineStyles.background = gradient;
-      inlineStyles.WebkitBackgroundClip = 'text';
-      inlineStyles.WebkitTextFillColor = 'transparent';
-      // Fallback for print (gradients often don't print well on text)
-      classes += " print:text-black print:!bg-none print:!text-fill-current"; 
-      inlineStyles.borderBottom = `1px solid ${accent}40`;
-  } else {
-      inlineStyles.borderBottom = `1px solid ${dark ? '#333' : '#e2e8f0'}`;
-  }
+// --- SUB-COMPONENTS ---
 
-  return <h3 className={classes} style={inlineStyles}>{title}</h3>;
-};
-
-const DateDisplay = ({ date, formatStr }: { date: string, formatStr?: string }) => {
+const DateDisplay = ({ date, formatStr, className }: { date: string, formatStr?: string, className?: string }) => {
   if (!date) return null;
-  
+  let display = date;
   try {
-     if (typeof date !== 'string') return null;
-
-     let parsedDate: Date | null = null;
-     if (date.match(/^\d{4}-\d{2}$/)) { 
-         const [y, m] = date.split('-').map(Number);
-         parsedDate = new Date(y, m - 1);
-     } else if (date.match(/^\d{2}\/\d{4}$/)) { 
-         const [m, y] = date.split('/').map(Number);
-         parsedDate = new Date(y, m - 1);
-     } else if (date.match(/^\d{4}$/)) {
-         return <span>{date}</span>;
+     if (typeof date === 'string') {
+        let d: Date | null = null;
+        if (date.match(/^\d{4}-\d{2}$/)) { const [y, m] = date.split('-').map(Number); d = new Date(y, m - 1); }
+        else if (date.match(/^\d{2}\/\d{4}$/)) { const [m, y] = date.split('/').map(Number); d = new Date(y, m - 1); }
+        else if (date.match(/^\d{4}$/)) { d = new Date(Number(date), 0); }
+        
+        if (d && !isNaN(d.getTime())) {
+             const locale = 'pt-BR';
+             if (formatStr === 'yyyy') display = d.getFullYear().toString();
+             else if (formatStr === 'MM/yyyy') display = `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+             else if (formatStr === 'full') display = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(d);
+             else display = new Intl.DateTimeFormat(locale, { month: 'short', year: 'numeric' }).format(d).replace('.', '');
+        }
      }
-     
-     if (!parsedDate || isNaN(parsedDate.getTime())) return <span>{date}</span>;
+  } catch (e) {}
+  return <span className={`capitalize ${className}`}>{display}</span>;
+};
 
-     const locale = 'pt-BR';
-     if (formatStr === 'yyyy') return <span>{parsedDate.getFullYear()}</span>;
-     if (formatStr === 'MM/yyyy') {
-         const m = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
-         return <span>{m}/{parsedDate.getFullYear()}</span>;
-     }
-     if (formatStr === 'full') {
-         return <span>{new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(parsedDate)}</span>;
-     }
-     return <span className="capitalize">{new Intl.DateTimeFormat(locale, { month: 'short', year: 'numeric' }).format(parsedDate).replace('.', '')}</span>;
+const ContactItem = ({ icon: Icon, text, link, style, iconStyle }: any) => {
+    if (!text) return null;
+    const DisplayIcon = link ? (text.includes('github') ? Github : text.includes('linkedin') ? Linkedin : Icon) : Icon;
+    const safeLink = link ? sanitizeLink(link) : undefined;
+    return (
+        <div className="flex items-center gap-2 mb-1.5 break-inside-avoid" style={style}>
+            <DisplayIcon size={14} style={iconStyle} className="flex-shrink-0"/>
+            {safeLink ? (
+                <a href={safeLink} target="_blank" rel="noreferrer" className="hover:underline truncate text-[inherit] print:no-underline">{text}</a>
+            ) : <span className="truncate">{text}</span>}
+        </div>
+    );
+};
 
-  } catch (e) {
-    return <span>{date}</span>;
-  }
+const SectionTitle = ({ title, theme, settings, customIcon }: any) => {
+    const { colors, id } = theme;
+    const { headerFont, headerStyle } = settings;
+    const primary = settings.primaryColor || colors.primary;
+    
+    let containerClass = "mb-4 break-after-avoid break-inside-avoid flex items-center gap-3";
+    let textClass = `text-sm font-bold uppercase tracking-wider ${headerFont}`;
+    let textStyle: any = { color: primary };
+    let lineStyle: any = {};
+    
+    // Style Variations
+    if (headerStyle === 'underline') {
+        containerClass += " border-b-2 pb-1";
+        textStyle.borderColor = colors.accent;
+    } else if (headerStyle === 'box') {
+        textClass += " px-3 py-1.5 rounded-md";
+        textStyle = { backgroundColor: colors.accent, color: getContrastColor(colors.accent) };
+    } else if (headerStyle === 'left-bar') {
+        containerClass += " border-l-4 pl-3";
+        textStyle = { color: colors.text };
+        textStyle.borderColor = colors.accent;
+    }
+
+    if (id === 'swiss-international') {
+        textClass = "text-lg font-black uppercase tracking-tighter border-b-4 border-black pb-1 mb-6";
+        textStyle = { color: '#000' };
+    }
+    
+    if (id === 'ivy-league') {
+        containerClass = "mb-4 pb-1 border-b border-double border-slate-300 flex items-center gap-2 justify-center text-center";
+        textClass = "text-base font-serif font-bold tracking-widest text-center";
+        textStyle = { color: primary };
+    }
+
+    return (
+        <div className={containerClass} style={headerStyle === 'underline' ? {borderColor: `${primary}40`} : {}}>
+             {id === 'tech-lead-dark' && <span className="text-cyan-400 font-mono">//</span>}
+             {customIcon && headerStyle !== 'box' && headerStyle !== 'left-bar' && <span style={{color: colors.accent}}>{customIcon}</span>}
+             <h3 className={textClass} style={textStyle}>{title}</h3>
+             {headerStyle === 'simple' && <div className="flex-1 h-px bg-slate-200 print:bg-slate-300 ml-2" style={{backgroundColor: `${primary}20`}}></div>}
+        </div>
+    );
+};
+
+const SkillPill = ({ name, level, theme, settings }: any) => {
+    const primary = settings.primaryColor || theme.colors.primary;
+    const isDark = theme.id.includes('dark');
+    
+    if (settings.skillStyle === 'hidden') return <span className="mr-3 mb-1">• {name}</span>;
+    if (settings.skillStyle === 'bar') {
+        return (
+            <div className="w-full mb-2">
+                <div className="flex justify-between text-xs mb-0.5 font-medium"><span>{name}</span></div>
+                <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden print:border print:border-slate-200">
+                    <div className="h-full print:print-color-adjust-exact" style={{width: `${level*20}%`, backgroundColor: primary}}></div>
+                </div>
+            </div>
+        );
+    }
+    // Tag Style (Default)
+    const bgColor = isDark ? 'rgba(255,255,255,0.1)' : `${theme.colors.accent}15`;
+    const textColor = isDark ? '#fff' : (isColorTooLight(primary) ? '#334155' : primary);
+    const borderColor = isDark ? 'rgba(255,255,255,0.1)' : `${theme.colors.accent}30`;
+    
+    return (
+        <span className="px-2.5 py-1 rounded-md text-xs font-semibold border print:print-color-adjust-exact" style={{backgroundColor: bgColor, color: textColor, borderColor: borderColor}}>
+            {name}
+        </span>
+    );
 };
 
 export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume' }) => {
-  const { colors, layout } = theme;
-  const { settings } = data;
+  const { settings, personalInfo } = data;
+  const { colors, layout, id } = theme;
+  const primary = settings.primaryColor || colors.primary;
   
-  const headerFontClass = settings.headerFont || theme.fonts?.header || 'font-sans';
-  const bodyFontClass = settings.bodyFont || theme.fonts?.body || 'font-sans';
+  // Font Classes
+  const hFont = settings.headerFont || theme.fonts?.header || 'font-sans';
+  const bFont = settings.bodyFont || theme.fonts?.body || 'font-sans';
 
-  // Base styles for the resume paper
-  const style = {
-    '--primary': settings.primaryColor || colors.primary,
-    '--secondary': colors.secondary,
-    '--text': colors.text,
-    '--bg': colors.bg,
-    '--accent': colors.accent,
-    fontSize: `${settings.fontScale * 0.875}rem`,
-    lineHeight: settings.lineHeight || settings.spacingScale * 1.5,
-    backgroundColor: theme.id === 'tech-dark' ? '#0f172a' : '#fff',
-    color: theme.id === 'tech-dark' ? '#cbd5e1' : colors.text,
-  } as React.CSSProperties;
+  // --- RENDERING HELPERS ---
+  const renderList = (sectionId: string) => {
+      const items = (data as any)[sectionId];
+      if (!items || items.length === 0 || !settings.visibleSections[sectionId]) return null;
 
-  const primaryColor = settings.primaryColor || colors.primary;
-  const isDarkTheme = theme.id === 'tech-dark'; 
-  
-  // Calculate readable text colors on top of dynamic backgrounds
-  const textOnPrimary = getContrastColor(primaryColor);
-  const textOnSecondary = getContrastColor(colors.secondary);
+      let SectionIcon = null;
+      if (sectionId === 'experience') SectionIcon = <Briefcase size={16}/>;
+      if (sectionId === 'education') SectionIcon = <GraduationCap size={16}/>;
+      if (sectionId === 'skills') SectionIcon = <Zap size={16}/>;
 
-  const getCustomIcon = (id?: string) => {
-      switch(id) {
-          case 'star': return Star;
-          case 'globe': return Globe;
-          case 'code': return Code;
-          case 'heart': return Heart;
-          case 'pen': return PenTool;
-          case 'award': return Award;
-          default: return null;
-      }
-  };
+      const titleMap: any = { experience: 'Experiência', education: 'Educação', skills: 'Habilidades', projects: 'Projetos', volunteer: 'Voluntariado', awards: 'Prêmios', interests: 'Interesses', publications: 'Publicações', references: 'Referências', languages: 'Idiomas' };
+      const title = titleMap[sectionId] || sectionId;
 
-  const renderSection = (type: string) => {
-    if (!data.settings.visibleSections[type]) return null;
-    
-    switch(type) {
-      case 'experience':
-        if (data.experience.length === 0) return null;
-        return (
-          <div className="mb-6 group-section break-inside-avoid">
-            <SectionTitle title="Experiência" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
-            <div className={`${theme.id === 'timeline-pro' ? 'border-l-2 border-slate-200 ml-2 pl-4 space-y-6' : 'space-y-4'}`}>
-              {data.experience.map((exp, i) => (
-                <div key={exp.id} className={`break-inside-avoid relative ${settings.compactMode ? 'mb-2' : ''}`}>
-                   {theme.id === 'timeline-pro' && <div className="absolute -left-[21px] top-1.5 w-3 h-3 rounded-full border-2 border-white print:print-color-adjust-exact" style={{backgroundColor: primaryColor}}></div>}
-                   <div className="flex justify-between items-baseline mb-0.5">
-                      <h4 className={`font-bold text-lg ${bodyFontClass} print:text-black`} style={{color: isDarkTheme ? '#fff' : 'var(--text)'}}>{exp.role}</h4>
-                      {settings.showDuration && (
-                          <span className="text-xs opacity-70 whitespace-nowrap print:text-black">
-                              <DateDisplay date={exp.startDate} formatStr={settings.dateFormat}/> – {exp.current ? 'Atualmente' : <DateDisplay date={exp.endDate} formatStr={settings.dateFormat}/>}
-                          </span>
-                      )}
-                   </div>
-                   <div className="text-sm font-semibold mb-2 print:text-black" style={{color: colors.accent}}>{exp.company} {exp.location && `• ${exp.location}`}</div>
-                   <div className={`text-sm opacity-90 text-justify ${bodyFontClass} print:text-black`} style={{color: isDarkTheme ? '#ccc' : 'var(--text)'}}>
-                       <MarkdownText text={exp.description} />
-                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      case 'education':
-         if (data.education.length === 0) return null;
-         return (
-           <div className="mb-6 group-section break-inside-avoid">
-             <SectionTitle title="Educação" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
-             {data.education.map(edu => (
-               <div key={edu.id} className="mb-3 break-inside-avoid">
-                 <div className="flex justify-between font-bold print:text-black"><span style={{color: isDarkTheme ? '#fff' : 'var(--text)'}}>{edu.school}</span> <span className="text-xs font-normal opacity-70"><DateDisplay date={edu.endDate} formatStr={settings.dateFormat}/></span></div>
-                 <div className="text-sm print:text-black" style={{color: colors.accent}}>{edu.degree}</div>
-               </div>
-             ))}
-           </div>
-         );
-      case 'skills':
-          if (data.skills.length === 0) return null;
-          return (
-            <div className="mb-6 group-section break-inside-avoid">
-              <SectionTitle title="Habilidades" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
-              <div className={`flex flex-wrap ${settings.skillStyle === 'tags' || settings.skillStyle === 'circles' ? 'gap-2' : settings.skillStyle === 'hidden' ? 'block' : 'flex-col gap-1'}`}>
-                {data.skills.map(s => <SkillItem key={s.id} skill={s} settings={settings} primary={primaryColor} accent={colors.accent} dark={isDarkTheme} />)}
-              </div>
-            </div>
-          );
-      case 'projects':
-          if (data.projects.length === 0) return null;
-          return (
-             <div className="mb-6 group-section break-inside-avoid">
-               <SectionTitle title="Projetos" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
-               {data.projects.map(p => (
-                 <div key={p.id} className="mb-3 break-inside-avoid">
-                    <div className="font-bold flex items-center gap-2 print:text-black" style={{color: isDarkTheme ? '#fff' : 'var(--text)'}}>
-                        {p.name} 
-                        {p.url && <a href={sanitizeLink(p.url)} target="_blank" rel="noreferrer" className="text-blue-500 print:text-black print:no-underline"><ExternalLink size={10}/></a>}
-                    </div>
-                    <div className="text-sm opacity-90 print:text-black"><MarkdownText text={p.description} /></div>
-                 </div>
-               ))}
-             </div>
-          );
-      case 'languages':
-         if (data.languages.length === 0) return null;
-         return (
-            <div className="mb-6 group-section break-inside-avoid">
-              <SectionTitle title="Idiomas" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
-              <div className="text-sm opacity-90 print:text-black">{data.languages.join(' • ')}</div>
-            </div>
-         );
-      case 'interests':
-         if (data.interests.length === 0) return null;
-         return (
-            <div className="mb-6 group-section break-inside-avoid">
-              <SectionTitle title="Interesses" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
-              <div className="text-sm opacity-90 print:text-black flex flex-wrap gap-2">
-                  {data.interests.map(int => (
-                      <span key={int.id} className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300 text-xs print:border print:bg-white print:text-black">{int.name}</span>
-                  ))}
-              </div>
-            </div>
-         );
-      case 'publications':
-         if (data.publications.length === 0) return null;
-         return (
-             <div className="mb-6 group-section break-inside-avoid">
-                 <SectionTitle title="Publicações" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
-                 {data.publications.map(pub => (
-                     <div key={pub.id} className="mb-3 break-inside-avoid">
-                         <div className="font-bold flex items-center gap-1 print:text-black">
-                            {pub.title}
-                            {pub.url && <a href={sanitizeLink(pub.url)} target="_blank" rel="noreferrer"><ExternalLink size={10} className="text-blue-500"/></a>}
-                         </div>
-                         <div className="text-xs opacity-70 italic print:text-black">{pub.publisher} • {pub.date}</div>
-                     </div>
-                 ))}
-             </div>
-         );
-      case 'volunteer':
-         if (data.volunteer.length === 0) return null;
-         return (
-             <div className="mb-6 group-section break-inside-avoid">
-                 <SectionTitle title="Voluntariado" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
-                 {data.volunteer.map(vol => (
-                     <div key={vol.id} className="mb-3 break-inside-avoid">
-                         <div className="flex justify-between font-bold print:text-black"><span style={{color: isDarkTheme ? '#fff' : 'var(--text)'}}>{vol.role}</span> <span className="text-xs font-normal opacity-70">{vol.startDate}</span></div>
-                         <div className="text-sm print:text-black" style={{color: colors.accent}}>{vol.organization}</div>
-                     </div>
-                 ))}
-             </div>
-         );
-       case 'awards':
-         if (data.awards.length === 0) return null;
-         return (
-             <div className="mb-6 group-section break-inside-avoid">
-                 <SectionTitle title="Prêmios" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
-                 {data.awards.map(aw => (
-                     <div key={aw.id} className="mb-2 break-inside-avoid">
-                         <div className="font-bold print:text-black">{aw.title}</div>
-                         <div className="text-xs opacity-70 print:text-black">{aw.issuer} • {aw.date}</div>
-                     </div>
-                 ))}
-             </div>
-         );
-       case 'references':
-         if (data.references.length === 0) return null;
-         return (
-             <div className="mb-6 group-section break-inside-avoid">
-                 <SectionTitle title="Referências" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
-                 {data.references.map(ref => (
-                     <div key={ref.id} className="mb-2 break-inside-avoid">
-                         <div className="font-bold print:text-black">{ref.name}</div>
-                         <div className="text-xs opacity-80 print:text-black">{ref.role} @ {ref.company}</div>
-                         <div className="text-xs opacity-60 print:text-black">{ref.contact}</div>
-                     </div>
-                 ))}
-             </div>
-         );
-      case 'custom':
-         if (data.customSections.length === 0) return null;
-         return (
-           <>
-             {data.customSections.map(sec => {
-               if(sec.items.length === 0) return null;
-               const CustomIcon = getCustomIcon(sec.icon);
-               return (
-               <div key={sec.id} className="mb-6 group-section break-inside-avoid">
-                 <div className="flex items-center gap-2 mb-4">
-                    {CustomIcon && <CustomIcon size={18} style={{color: colors.accent}} />}
-                    <SectionTitle title={sec.name} font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
-                 </div>
-                 {sec.items.map(item => (
-                   <div key={item.id} className="mb-2 break-inside-avoid">
-                      <div className="font-bold print:text-black">{item.title}</div>
-                      <div className="text-xs opacity-70 mb-1 print:text-black">{item.subtitle}</div>
-                      <div className="text-sm opacity-90 whitespace-pre-line print:text-black"><MarkdownText text={item.description} /></div>
-                   </div>
-                 ))}
-               </div>
-             )})}
-           </>
-         );
-      default: return null;
-    }
-  };
-
-  const ContactList = ({ vertical = false, className = '', contrastText }: { vertical?: boolean, className?: string, contrastText?: string }) => (
-     <div className={`flex ${vertical ? 'flex-col gap-1' : 'flex-wrap gap-x-4 gap-y-1'} text-sm opacity-90 ${className} ${settings.headerAlignment === 'center' && !vertical ? 'justify-center' : settings.headerAlignment === 'right' && !vertical ? 'justify-end' : ''}`} style={{color: contrastText || (isDarkTheme ? '#ccc' : 'var(--text)')}}>
-        <ContactItem icon={Mail} text={data.personalInfo.email} primary={primaryColor} privacyMode={settings.privacyMode} contrastText={contrastText} />
-        <ContactItem icon={Phone} text={data.personalInfo.phone} primary={primaryColor} privacyMode={settings.privacyMode} contrastText={contrastText} />
-        <ContactItem icon={MapPin} text={data.personalInfo.address} primary={primaryColor} privacyMode={settings.privacyMode} contrastText={contrastText} />
-        <ContactItem icon={Linkedin} text={data.personalInfo.linkedin} link={data.personalInfo.linkedin} primary={primaryColor} contrastText={contrastText} />
-        <ContactItem icon={Github} text={data.personalInfo.github} link={data.personalInfo.github} primary={primaryColor} contrastText={contrastText} />
-        <ContactItem icon={Globe} text={data.personalInfo.website} link={data.personalInfo.website} primary={primaryColor} contrastText={contrastText} />
-        <ContactItem icon={Twitter} text={data.personalInfo.twitter} link={data.personalInfo.twitter} primary={primaryColor} contrastText={contrastText} />
-        <ContactItem icon={Hash} text={data.personalInfo.behance} link={data.personalInfo.behance} primary={primaryColor} contrastText={contrastText} />
-     </div>
-  );
-
-  const getPhotoClasses = () => {
-      switch(settings.photoShape) {
-          case 'circle': return 'rounded-full';
-          case 'rounded': return 'rounded-xl';
-          default: return 'rounded-none';
-      }
-  };
-
-  const getAlignmentClasses = () => {
-      switch(settings.headerAlignment) {
-          case 'center': return 'text-center items-center';
-          case 'right': return 'text-right items-end';
-          default: return 'text-left items-start';
-      }
-  };
-
-  const getBackgroundStyle = () => {
-      const color = colors.accent + '20'; // 12% opacity
-      switch(settings.backgroundPattern) {
-          case 'dots': return { backgroundImage: `radial-gradient(${color} 1px, transparent 1px)`, backgroundSize: '20px 20px' };
-          case 'grid': return { backgroundImage: `linear-gradient(${color} 1px, transparent 1px), linear-gradient(90deg, ${color} 1px, transparent 1px)`, backgroundSize: '20px 20px' };
-          case 'lines': return { backgroundImage: `repeating-linear-gradient(45deg, ${color}, ${color} 1px, transparent 1px, transparent 10px)` };
-          default: return {};
-      }
-  };
-
-  const renderSingleColumn = () => (
-    <div className={`p-${8 * settings.marginScale} max-w-3xl mx-auto h-full relative`}>
-       {settings.watermark && (
-           <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5 z-0">
-               <span className="text-8xl font-black -rotate-45 uppercase text-slate-900">Rascunho</span>
-           </div>
-       )}
-       
-       <div className={`relative z-10 flex flex-col mb-8 ${getAlignmentClasses()}`}>
-          {data.personalInfo.photoUrl && <img src={data.personalInfo.photoUrl} className={`w-24 h-24 mb-4 object-cover border-4 border-white shadow-sm ${getPhotoClasses()}`}/>}
-          <h1 className={`text-4xl font-bold mb-2 uppercase tracking-tight ${headerFontClass} print:text-black`} style={{color: primaryColor}}>{data.personalInfo.fullName}</h1>
-          <p className={`text-xl mb-4 ${bodyFontClass} print:text-black`} style={{color: colors.accent}}>{data.personalInfo.jobTitle}</p>
-          <ContactList />
-       </div>
-       {data.settings.visibleSections.summary && data.personalInfo.summary && (
-         <div className={`mb-8 relative z-10 ${settings.headerAlignment === 'center' ? 'text-center px-8' : ''}`}>
-            <div className={`text-sm leading-relaxed opacity-80 ${bodyFontClass} print:text-black`}><MarkdownText text={data.personalInfo.summary} /></div>
-         </div>
-       )}
-       <div className="relative z-10">
-           {data.settings.sectionOrder.map(id => renderSection(id))}
-       </div>
-       
-       {data.personalInfo.signature && (
-           <div className="mt-12 pt-4 border-t border-slate-200 w-48 break-inside-avoid">
-               <p className="font-handwriting text-xl text-slate-800 dark:text-slate-300 print:text-black" style={{fontFamily: 'cursive'}}>{data.personalInfo.signature}</p>
-           </div>
-       )}
-    </div>
-  );
-
-  const renderSidebarLeft = () => {
-    // Determine sidebar background color
-    const sidebarBg = theme.id === 'timeline-pro' ? '#f8fafc' : colors.primary;
-    // Determine safe text color for sidebar
-    const sidebarTextColor = theme.id === 'timeline-pro' ? primaryColor : textOnPrimary;
-    
-    return (
-    <div className="flex h-full">
-       <div className={`w-[32%] p-${6 * settings.marginScale} flex flex-col gap-6 h-full print:print-color-adjust-exact`} style={{backgroundColor: sidebarBg, color: sidebarTextColor}}>
-          <div className="text-center flex flex-col items-center">
-             {data.personalInfo.photoUrl && <img src={data.personalInfo.photoUrl} className={`w-32 h-32 mb-4 object-cover border-4 border-white/20 ${getPhotoClasses()}`}/>}
-             {theme.id === 'timeline-pro' ? null : (
-               <>
-                 <h2 className="font-bold text-xl mb-1" style={{color: 'inherit'}}>{data.personalInfo.fullName}</h2>
-                 <p className="opacity-80 text-sm mb-4" style={{color: 'inherit'}}>{data.personalInfo.jobTitle}</p>
-               </>
-             )}
-          </div>
-          
-          <div className="flex flex-col gap-2 text-sm opacity-90">
-             <div className="font-bold uppercase tracking-wider mb-2 border-b pb-1" style={{borderColor: theme.id==='timeline-pro' ? '#e2e8f0' : 'rgba(255,255,255,0.2)'}}>Contato</div>
-             <ContactList vertical contrastText={sidebarTextColor} />
-          </div>
-
-          <div className="mt-4">
-             {/* Note: renderSection uses 'var(--text)' by default, so we might need CSS overrides for sidebar children if not handled */}
-             {renderSection('skills')}
-             {renderSection('languages')}
-             {renderSection('interests')}
-             {renderSection('awards')}
-          </div>
-       </div>
-       <div className={`flex-1 p-${8 * settings.marginScale} bg-white relative`}>
-          {settings.watermark && (
-               <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5 z-0">
-                   <span className="text-8xl font-black -rotate-45 uppercase text-slate-900">Rascunho</span>
-               </div>
-          )}
-          <div className="relative z-10">
-              {theme.id === 'timeline-pro' && (
-                 <div className="mb-8 border-b pb-4">
-                    <h1 className={`text-4xl font-bold mb-1 ${headerFontClass} print:text-black`} style={{color: primaryColor}}>{data.personalInfo.fullName}</h1>
-                    <p className="text-xl opacity-70 print:text-black">{data.personalInfo.jobTitle}</p>
-                 </div>
-              )}
-              {data.settings.visibleSections.summary && data.personalInfo.summary && (
-                 <div className="mb-8">
-                    <SectionTitle title="Resumo" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} gradient={theme.gradient} />
-                    <div className="text-sm leading-relaxed opacity-80 print:text-black"><MarkdownText text={data.personalInfo.summary} /></div>
-                 </div>
-              )}
-              {data.settings.sectionOrder.filter(id => !['skills','languages','awards','interests'].includes(id)).map(id => renderSection(id))}
+      return (
+          <div key={sectionId} className="mb-6 section-block">
+              <SectionTitle title={title} theme={theme} settings={settings} customIcon={SectionIcon} />
               
-              {data.personalInfo.signature && (
-               <div className="mt-12 pt-4 border-t border-slate-200 w-48 break-inside-avoid">
-                   <p className="font-handwriting text-xl text-slate-800 dark:text-slate-300 print:text-black" style={{fontFamily: 'cursive'}}>{data.personalInfo.signature}</p>
-               </div>
-             )}
-          </div>
-       </div>
-    </div>
-  )};
-
-  const renderGridComplex = () => (
-     <div className={`p-${8 * settings.marginScale} h-full bg-white relative`}>
-        <div className="grid grid-cols-12 gap-4 mb-12 border-b-4 border-black pb-4">
-           <div className="col-span-8">
-              <h1 className={`text-6xl font-bold tracking-tighter leading-none mb-2 ${headerFontClass} print:text-black`} style={{color: primaryColor}}>{data.personalInfo.fullName}</h1>
-              <p className="text-2xl font-light tracking-wide print:text-black">{data.personalInfo.jobTitle}</p>
-           </div>
-           <div className="col-span-4 text-right flex flex-col items-end justify-end">
-              <ContactList vertical className="items-end" />
-           </div>
-        </div>
-
-        <div className="grid grid-cols-12 gap-8">
-           <div className="col-span-4">
-              {data.settings.visibleSections.summary && data.personalInfo.summary && (
-                 <div className="mb-8">
-                    <h3 className="font-bold text-sm uppercase mb-2 border-t-2 border-black pt-1 print:text-black">Sobre</h3>
-                    <div className="text-sm leading-relaxed print:text-black"><MarkdownText text={data.personalInfo.summary} /></div>
-                 </div>
-              )}
-              {renderSection('skills')}
-              {renderSection('education')}
-              {renderSection('languages')}
-              {renderSection('interests')}
-           </div>
-           <div className="col-span-8">
-              {data.settings.sectionOrder.filter(id => !['skills','education','languages','interests'].includes(id)).map(id => (
-                  <div key={id} className="mb-8 border-l-2 border-slate-100 pl-4">
-                      {renderSection(id)}
+              {/* SKILLS & LANGUAGES GRID */}
+              {['skills', 'languages', 'interests'].includes(sectionId) ? (
+                  <div className={`flex flex-wrap ${settings.skillStyle === 'bar' ? 'flex-col gap-0' : 'gap-2'}`}>
+                      {items.map((item: any, i: number) => (
+                         typeof item === 'string' ? 
+                         <SkillPill key={i} name={item} level={5} theme={theme} settings={settings} /> :
+                         <SkillPill key={item.id} name={item.name} level={item.level || 5} theme={theme} settings={settings} />
+                      ))}
                   </div>
-              ))}
-           </div>
-        </div>
-     </div>
-  );
-
-  const renderGeometric = () => (
-     <div className={`p-${8 * settings.marginScale} h-full relative overflow-hidden print:print-color-adjust-exact`} style={{backgroundColor: colors.bg}}>
-        <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10 blur-3xl print:hidden" style={{backgroundColor: colors.primary}}></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 rounded-full opacity-10 blur-3xl print:hidden" style={{backgroundColor: colors.accent}}></div>
-        <div className="absolute top-20 left-10 w-20 h-20 rounded-lg rotate-12 opacity-5" style={{backgroundColor: colors.secondary}}></div>
-
-        <div className="relative z-10 flex flex-col items-center mb-10">
-           {data.personalInfo.photoUrl && <img src={data.personalInfo.photoUrl} className={`w-28 h-28 shadow-lg mb-4 object-cover ${getPhotoClasses()}`}/>}
-           <h1 className={`text-4xl font-bold mb-1 ${headerFontClass} print:text-black`}>{data.personalInfo.fullName}</h1>
-           <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-white shadow-sm print:border" style={{color: colors.accent}}>{data.personalInfo.jobTitle}</span>
-           <div className="mt-4 p-3 bg-white/50 backdrop-blur-sm rounded-xl shadow-sm border border-white print:border-slate-200">
-              <ContactList />
-           </div>
-        </div>
-
-        <div className="relative z-10 grid grid-cols-2 gap-8">
-           <div className="col-span-2 md:col-span-1 space-y-2">
-              {renderSection('experience')}
-              {renderSection('projects')}
-           </div>
-           <div className="col-span-2 md:col-span-1 space-y-2">
-              {data.settings.visibleSections.summary && data.personalInfo.summary && (
-                 <div className="mb-6 p-4 bg-white rounded-xl shadow-sm border border-slate-100 print:border-slate-200 break-inside-avoid">
-                    <h3 className="font-bold text-sm uppercase mb-2 print:text-black" style={{color: colors.primary}}>Resumo</h3>
-                    <p className="text-sm opacity-80 print:text-black"><MarkdownText text={data.personalInfo.summary} /></p>
-                 </div>
+              ) : (
+              /* STANDARD LIST ITEMS */
+                  <div className={`space-y-4 ${id === 'timeline-pro' ? 'border-l-2 border-slate-200 pl-4 ml-1.5' : ''}`}>
+                      {items.map((item: any) => (
+                          <div key={item.id} className="break-inside-avoid relative">
+                              {id === 'timeline-pro' && <div className="absolute -left-[23px] top-1.5 w-3 h-3 rounded-full border-2 border-white print:print-color-adjust-exact" style={{backgroundColor: primary}}></div>}
+                              
+                              <div className="flex justify-between items-baseline mb-0.5">
+                                  <h4 className={`text-base font-bold ${hFont}`} style={{color: id.includes('dark') ? '#fff' : '#1e293b'}}>
+                                      {item.role || item.school || item.title || item.name}
+                                  </h4>
+                                  {(item.startDate || item.date) && settings.showDuration && (
+                                      <span className="text-xs font-medium opacity-70 whitespace-nowrap">
+                                          <DateDisplay date={item.startDate || item.date} formatStr={settings.dateFormat}/> 
+                                          {item.endDate && ` - `}
+                                          {item.endDate && (item.current ? 'Pres.' : <DateDisplay date={item.endDate} formatStr={settings.dateFormat}/>)}
+                                      </span>
+                                  )}
+                              </div>
+                              
+                              {(item.company || item.degree || item.organization || item.publisher) && (
+                                  <div className="text-sm font-semibold mb-1.5" style={{color: colors.accent}}>
+                                      {item.company || item.degree || item.organization || item.publisher} 
+                                      {item.location && <span className="opacity-70 font-normal text-slate-500"> • {item.location}</span>}
+                                  </div>
+                              )}
+                              
+                              {item.description && (
+                                  <MarkdownText text={item.description} className={`text-sm opacity-90 leading-relaxed text-justify ${bFont}`} />
+                              )}
+                              {item.url && <a href={sanitizeLink(item.url)} target="_blank" className="text-xs underline mt-1 block opacity-70">{item.url}</a>}
+                          </div>
+                      ))}
+                  </div>
               )}
-              {renderSection('education')}
-              {renderSection('skills')}
-              {renderSection('languages')}
-              {renderSection('interests')}
-           </div>
-        </div>
-     </div>
-  );
+          </div>
+      );
+  };
 
+  const renderPhoto = (size: string = 'w-24 h-24') => {
+      if (!personalInfo.photoUrl) return null;
+      let shape = 'rounded-lg';
+      if (settings.photoShape === 'circle') shape = 'rounded-full';
+      if (settings.photoShape === 'square') shape = 'rounded-none';
+      return <img src={personalInfo.photoUrl} className={`${size} object-cover ${shape} mb-4 shadow-sm border-2 border-white`} style={{borderColor: id === 'creative-blob' ? 'transparent' : '#fff'}} />;
+  };
+
+  // --- LAYOUTS ---
+
+  const LayoutSidebarLeft = () => {
+      const isDarkSidebar = id === 'tech-lead-dark';
+      const sbBg = isDarkSidebar ? '#0f172a' : colors.bg === '#ffffff' ? '#f8fafc' : colors.primary;
+      const sbText = isDarkSidebar ? '#e2e8f0' : getContrastColor(sbBg);
+      const mainBg = '#ffffff';
+
+      return (
+          <div className="flex h-full min-h-[inherit]">
+              {/* SIDEBAR */}
+              <div className="w-[30%] p-6 flex flex-col print:print-color-adjust-exact" style={{backgroundColor: sbBg, color: sbText}}>
+                  <div className="mb-8 text-center">
+                       {renderPhoto('w-32 h-32 mx-auto')}
+                       {/* Name in Sidebar for some themes */}
+                       {id !== 'modern-slate' && (
+                           <>
+                             <h2 className={`text-xl font-bold leading-tight mb-2 ${hFont}`}>{personalInfo.fullName}</h2>
+                             <p className={`text-sm opacity-80 ${bFont}`}>{personalInfo.jobTitle}</p>
+                           </>
+                       )}
+                  </div>
+
+                  <div className="space-y-6">
+                      <div className="mb-6">
+                          <h3 className="text-xs font-bold uppercase tracking-widest mb-3 border-b pb-1 opacity-70" style={{borderColor: sbText}}>Contato</h3>
+                          <div className="flex flex-col gap-2 text-xs opacity-90">
+                              <ContactItem icon={Mail} text={personalInfo.email} />
+                              <ContactItem icon={Phone} text={personalInfo.phone} />
+                              <ContactItem icon={MapPin} text={personalInfo.address} />
+                              <ContactItem icon={Linkedin} text={personalInfo.linkedin} link={personalInfo.linkedin} />
+                              <ContactItem icon={Globe} text={personalInfo.website} link={personalInfo.website} />
+                              <ContactItem icon={Github} text={personalInfo.github} link={personalInfo.github} />
+                          </div>
+                      </div>
+                      
+                      {/* Sidebar Sections */}
+                      {renderList('skills')}
+                      {renderList('languages')}
+                      {renderList('interests')}
+                      {renderList('awards')}
+                  </div>
+              </div>
+
+              {/* MAIN CONTENT */}
+              <div className="flex-1 p-8 bg-white" style={{backgroundColor: mainBg}}>
+                  {id === 'modern-slate' && (
+                      <div className="mb-8 border-b-2 border-slate-100 pb-6">
+                          <h1 className={`text-4xl font-bold mb-1 ${hFont}`} style={{color: primary}}>{personalInfo.fullName}</h1>
+                          <p className={`text-xl text-slate-500 font-medium ${bFont}`}>{personalInfo.jobTitle}</p>
+                      </div>
+                  )}
+
+                  {settings.visibleSections.summary && personalInfo.summary && (
+                      <div className="mb-8">
+                          <SectionTitle title="Resumo Profissional" theme={theme} settings={settings} />
+                          <MarkdownText text={personalInfo.summary} className={`text-sm leading-relaxed opacity-90 text-justify ${bFont}`} />
+                      </div>
+                  )}
+
+                  {settings.sectionOrder.filter(s => !['skills','languages','interests','awards'].includes(s)).map(renderList)}
+              </div>
+          </div>
+      );
+  };
+
+  const LayoutBanner = () => {
+      // Creative Blob / Header Layout
+      return (
+          <div className="h-full bg-white relative">
+              {/* Header */}
+              <div className="relative p-10 pb-16 text-white print:print-color-adjust-exact overflow-hidden" style={{background: theme.gradient || primary}}>
+                   {/* Decorative Blobs */}
+                   {id === 'creative-blob' && (
+                       <>
+                         <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4"></div>
+                       </>
+                   )}
+                   
+                   <div className="relative z-10 flex items-center gap-6">
+                       {renderPhoto('w-28 h-28 border-4 border-white/30')}
+                       <div>
+                           <h1 className={`text-5xl font-black mb-2 tracking-tight ${hFont}`}>{personalInfo.fullName}</h1>
+                           <p className={`text-2xl opacity-90 font-light ${bFont}`}>{personalInfo.jobTitle}</p>
+                       </div>
+                   </div>
+                   
+                   <div className="absolute bottom-4 right-8 flex gap-4 text-xs font-bold opacity-80">
+                        {personalInfo.email && <span className="flex items-center gap-1"><Mail size={12}/> {personalInfo.email}</span>}
+                        {personalInfo.phone && <span className="flex items-center gap-1"><Phone size={12}/> {personalInfo.phone}</span>}
+                        {personalInfo.linkedin && <span className="flex items-center gap-1"><Linkedin size={12}/> LinkedIn</span>}
+                   </div>
+              </div>
+
+              {/* Body */}
+              <div className="p-10 -mt-8 grid grid-cols-12 gap-8 relative z-20">
+                   <div className="col-span-8 bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                        {settings.visibleSections.summary && personalInfo.summary && (
+                            <div className="mb-8 p-4 bg-slate-50 rounded-lg border-l-4 border-l-[var(--primary)]" style={{'--primary': primary} as any}>
+                                <MarkdownText text={personalInfo.summary} className="text-sm italic opacity-80" />
+                            </div>
+                        )}
+                        {settings.sectionOrder.filter(s => !['skills','languages','interests','awards','education'].includes(s)).map(renderList)}
+                   </div>
+                   
+                   <div className="col-span-4 space-y-6">
+                        <div className="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                            {renderList('education')}
+                            {renderList('skills')}
+                            {renderList('languages')}
+                            {renderList('awards')}
+                        </div>
+                   </div>
+              </div>
+          </div>
+      );
+  };
+
+  const LayoutSingleColumn = () => {
+      // Used for 'The CEO', 'Startup Pop'
+      const isCEO = id === 'executive-gold';
+      const isStartup = id === 'startup-pop';
+      
+      return (
+          <div className="p-12 h-full bg-white max-w-4xl mx-auto">
+              {/* Header */}
+              <div className={`text-center mb-10 ${isCEO ? 'border-b-2 border-black pb-8' : ''}`}>
+                  {renderPhoto('w-24 h-24 mx-auto mb-4')}
+                  <h1 className={`text-4xl sm:text-5xl font-bold mb-2 ${hFont} ${isCEO ? 'uppercase tracking-widest' : ''}`} style={{color: isCEO ? '#000' : primary}}>{personalInfo.fullName}</h1>
+                  <p className={`text-lg sm:text-xl text-slate-500 mb-4 ${bFont} ${isCEO ? 'font-serif italic' : ''}`}>{personalInfo.jobTitle}</p>
+                  
+                  <div className="flex flex-wrap justify-center gap-4 text-sm opacity-80">
+                       <ContactItem icon={Mail} text={personalInfo.email} />
+                       <ContactItem icon={Phone} text={personalInfo.phone} />
+                       <ContactItem icon={Linkedin} text={personalInfo.linkedin} link={personalInfo.linkedin} />
+                       <ContactItem icon={Globe} text={personalInfo.website} link={personalInfo.website} />
+                  </div>
+              </div>
+
+              {settings.visibleSections.summary && personalInfo.summary && (
+                  <div className={`mb-10 text-center mx-auto max-w-2xl ${isCEO ? 'text-base leading-loose font-serif' : 'text-sm opacity-80'}`}>
+                       <MarkdownText text={personalInfo.summary} />
+                  </div>
+              )}
+
+              {/* Sections */}
+              <div className="space-y-2">
+                 {settings.sectionOrder.map(renderList)}
+              </div>
+          </div>
+      );
+  };
+
+  const LayoutGridComplex = () => {
+      // Swiss International Style
+      return (
+          <div className="p-8 h-full bg-white font-sans">
+              <div className="grid grid-cols-12 gap-6 h-full">
+                  {/* Header Area */}
+                  <div className="col-span-12 mb-8 border-b-8 border-black pb-6">
+                      <h1 className="text-7xl font-black tracking-tighter uppercase leading-none mb-2" style={{color: primary}}>{personalInfo.fullName}</h1>
+                      <div className="flex justify-between items-end">
+                          <p className="text-2xl font-bold uppercase tracking-wide bg-black text-white px-2 inline-block">{personalInfo.jobTitle}</p>
+                          <div className="text-right text-xs font-mono">
+                              <p>{personalInfo.email}</p>
+                              <p>{personalInfo.phone}</p>
+                              <p>{personalInfo.location}</p>
+                          </div>
+                      </div>
+                  </div>
+
+                  {/* Left Col */}
+                  <div className="col-span-4 pr-6 border-r-2 border-slate-100">
+                      {settings.visibleSections.summary && personalInfo.summary && (
+                          <div className="mb-10">
+                              <h3 className="font-black uppercase mb-2 text-sm">Bio</h3>
+                              <MarkdownText text={personalInfo.summary} className="text-sm font-medium leading-snug" />
+                          </div>
+                      )}
+                      {renderList('skills')}
+                      {renderList('education')}
+                      {renderList('languages')}
+                  </div>
+
+                  {/* Right Col */}
+                  <div className="col-span-8">
+                       {settings.sectionOrder.filter(s => !['skills','education','languages','summary'].includes(s)).map(renderList)}
+                  </div>
+              </div>
+          </div>
+      );
+  };
+  
+  // --- COVER LETTER ---
   if (mode === 'cover') {
       return (
-          <div className={`p-${12 * settings.marginScale} max-w-3xl mx-auto h-full`}>
-             <div className="border-b-2 border-slate-800 pb-6 mb-8">
-                 <h1 className="text-4xl font-bold uppercase tracking-wider mb-2" style={{color: primaryColor}}>{data.personalInfo.fullName}</h1>
-                 <p className="text-lg opacity-80 mb-4">{data.personalInfo.jobTitle}</p>
-                 <ContactList />
-             </div>
-             
-             <div className="mb-8">
-                 <p className="font-bold">{data.coverLetter.recipientName || 'Hiring Manager'}</p>
-                 <p>{data.coverLetter.companyName}</p>
-             </div>
+        <div className={`p-12 h-full bg-white max-w-3xl mx-auto flex flex-col ${bFont}`}>
+            {/* Header matches resume style slightly */}
+            <div className="border-b-2 border-slate-800 pb-6 mb-10">
+                 <h1 className={`text-4xl font-bold uppercase tracking-wider mb-2 ${hFont}`} style={{color: primary}}>{personalInfo.fullName}</h1>
+                 <p className="text-lg opacity-80">{personalInfo.jobTitle}</p>
+                 <div className="mt-4 flex flex-wrap gap-4 text-sm opacity-70">
+                    <ContactItem icon={Mail} text={personalInfo.email} />
+                    <ContactItem icon={Phone} text={personalInfo.phone} />
+                 </div>
+            </div>
+            
+            <div className="mb-10 text-sm">
+                <p className="font-bold text-lg">{data.coverLetter.recipientName || 'Ao Gestor de Contratação'}</p>
+                <p className="text-slate-600">{data.coverLetter.companyName}</p>
+                <p className="text-slate-400 mt-1">{new Date().toLocaleDateString('pt-BR', {year:'numeric', month:'long', day:'numeric'})}</p>
+            </div>
 
-             <div className="whitespace-pre-wrap text-sm leading-loose opacity-90 text-justify font-serif">
-                 {data.coverLetter.content || "Use a aba 'Carta' no editor para gerar seu conteúdo..."}
-             </div>
-          </div>
-      )
+            <div className="whitespace-pre-wrap text-base leading-loose opacity-90 text-justify flex-1">
+                 {data.coverLetter.content || "Use a aba 'Carta' no editor para gerar seu conteúdo com IA..."}
+            </div>
+            
+            {personalInfo.signature && (
+               <div className="mt-12 pt-4 w-48">
+                   <p className="font-handwriting text-2xl text-slate-800" style={{fontFamily: 'cursive'}}>{personalInfo.signature}</p>
+               </div>
+            )}
+        </div>
+      );
   }
 
-  let Content = renderSingleColumn;
-  if (layout === 'sidebar-left' || layout === 'sidebar-right') Content = renderSidebarLeft;
-  if (layout === 'grid-complex') Content = renderGridComplex;
-  if (theme.id === 'geometric-pop') Content = renderGeometric;
-  if (theme.id === 'tech-dark') Content = renderSingleColumn; 
+  // --- RENDER ROUTER ---
+  let RenderLayout = LayoutSingleColumn;
+  if (layout === 'sidebar-left') RenderLayout = LayoutSidebarLeft;
+  if (layout === 'sidebar-right') RenderLayout = LayoutSidebarLeft; // Can swap flex-direction via CSS if needed, but keeping simple for now
+  if (layout === 'banner') RenderLayout = LayoutBanner;
+  if (layout === 'grid-complex') RenderLayout = LayoutGridComplex;
+  if (layout === 'stacked' || id === 'ivy-league') RenderLayout = LayoutSingleColumn;
 
-  const patternStyle = getBackgroundStyle();
-  const glassClass = settings.glassmorphism ? 'backdrop-blur-sm bg-opacity-90' : '';
+  // Global Style Variables
+  const styleVars = {
+    '--primary': primary,
+    '--text': colors.text,
+    '--bg': colors.bg,
+    fontSize: `${settings.fontScale * 0.9}rem`,
+    lineHeight: settings.lineHeight,
+  } as React.CSSProperties;
+
+  // Background Pattern
+  const patternStyle = settings.backgroundPattern !== 'none' ? {
+      backgroundImage: settings.backgroundPattern === 'dots' ? `radial-gradient(${colors.accent}20 1px, transparent 1px)` : 
+                       settings.backgroundPattern === 'grid' ? `linear-gradient(${colors.accent}10 1px, transparent 1px), linear-gradient(90deg, ${colors.accent}10 1px, transparent 1px)` : undefined,
+      backgroundSize: '24px 24px'
+  } : {};
 
   return (
-    <div className={`w-full h-full min-h-full print:h-auto overflow-hidden print:overflow-visible bg-white relative print:shadow-none print:!bg-white print:!text-black ${settings.grayscale ? 'grayscale' : ''} ${glassClass}`} style={{...style, ...patternStyle}}>
-        {/* FORCE PRINT COLORS: This style block resets critical CSS variables during print to avoid invisible text in dark themes */}
-        <style>{`
-           @media print {
-             .print\\:text-black { color: #000 !important; }
-             .print\\:bg-white { background-color: #fff !important; }
-             * { 
-               --text: #000000 !important; 
-               --bg: #ffffff !important; 
-               -webkit-print-color-adjust: exact !important;
-               print-color-adjust: exact !important;
-             }
-           }
-        `}</style>
-        
-        {/* Page Guide Overlay */}
-        <div className="absolute top-[1122px] left-0 w-full border-b-2 border-dashed border-red-300 opacity-50 z-50 pointer-events-none print:hidden flex items-center justify-center">
-            <span className="bg-red-100 text-red-500 text-[10px] px-1">Fim da Página 1 (A4)</span>
-        </div>
-        
-        <Content />
-        {settings.showQrCode && data.personalInfo.linkedin && (
-           <div className="absolute top-4 right-4 print:block hidden">
-             <img src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(data.personalInfo.linkedin)}`} className="w-16 h-16 opacity-80" />
+    <div className={`w-full h-full min-h-full print:h-auto overflow-hidden print:overflow-visible relative bg-white ${settings.grayscale ? 'grayscale' : ''}`} style={{...styleVars, ...patternStyle}}>
+       <style>{`
+         @media print {
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .section-block { break-inside: avoid; }
+         }
+       `}</style>
+
+       <RenderLayout />
+       
+       {settings.watermark && (
+           <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] z-0 overflow-hidden">
+               <span className="text-[12rem] font-black -rotate-45 uppercase">Rascunho</span>
            </div>
-        )}
+       )}
     </div>
   );
 };
