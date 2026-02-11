@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
@@ -5,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Trampo-lin | Criador de Currículos</title>
     
-    <!-- Mantendo Tailwind via CDN para simplicidade, mas o setup via PostCSS também funcionaria com o package.json -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -33,6 +33,15 @@
             },
             screens: {
               'print': {'raw': 'print'},
+            },
+            animation: {
+              'slide-in': 'slideIn 0.3s ease-out forwards',
+            },
+            keyframes: {
+              slideIn: {
+                '0%': { transform: 'translateY(100%)', opacity: '0' },
+                '100%': { transform: 'translateY(0)', opacity: '1' },
+              }
             }
           }
         }
@@ -42,15 +51,50 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:wght@300;400;700&family=Roboto+Mono:wght@400;500&family=Poppins:wght@400;600;700&family=Lato:wght@400;700&family=Open+Sans:wght@400;600&family=Montserrat:wght@400;600;700&family=Raleway:wght@400;600&display=swap" rel="stylesheet">
     
     <style>
+      /* Print Specific Overrides */
       @media print {
-        @page { margin: 0; }
-        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        @page { margin: 0; size: auto; }
+        body { 
+          -webkit-print-color-adjust: exact !important; 
+          print-color-adjust: exact !important; 
+          background-color: white !important;
+        }
+        /* Force light mode variables in print */
+        .dark {
+            color-scheme: light;
+        }
+        .print\:hidden { display: none !important; }
+        .print\:block { display: block !important; }
+        
+        /* Hide scrollbars in print */
+        ::-webkit-scrollbar { display: none; }
+        
+        /* Ensure specific elements have backgrounds */
+        * { box-shadow: none !important; }
       }
-      /* Custom Scrollbar for Editor */
+
+      /* Custom Scrollbar */
       .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
       .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
       .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
       .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
+      .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
+      
+      /* Input Auto-fill fix for dark mode */
+      input:-webkit-autofill,
+      input:-webkit-autofill:hover, 
+      input:-webkit-autofill:focus, 
+      input:-webkit-autofill:active{
+          -webkit-box-shadow: 0 0 0 30px #f8fafc inset !important;
+      }
+      .dark input:-webkit-autofill,
+      .dark input:-webkit-autofill:hover, 
+      .dark input:-webkit-autofill:focus, 
+      .dark input:-webkit-autofill:active{
+          -webkit-box-shadow: 0 0 0 30px #0f172a inset !important;
+          -webkit-text-fill-color: white !important;
+      }
     </style>
   <script type="importmap">
 {
@@ -68,9 +112,8 @@
 }
 </script>
 </head>
-  <body class="bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
+  <body class="bg-slate-50 dark:bg-slate-900 transition-colors duration-300 antialiased selection:bg-trampo-500/30">
     <div id="root"></div>
-    <!-- Entry point do Vite -->
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>
