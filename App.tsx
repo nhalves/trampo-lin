@@ -200,10 +200,10 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="h-screen bg-slate-100 dark:bg-slate-950 flex flex-col font-sans text-slate-800 dark:text-slate-200 overflow-hidden selection:bg-trampo-500/30 print:h-auto print:overflow-visible">
+    <div className="h-screen bg-slate-100 dark:bg-slate-950 flex flex-col font-sans text-slate-800 dark:text-slate-200 overflow-hidden selection:bg-trampo-500/30">
       
-      {/* Navbar */}
-      <nav className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 lg:px-6 shadow-sm z-50 print:hidden flex-shrink-0">
+      {/* Navbar - ID ADICIONADO PARA CSS PRINT */}
+      <nav id="app-navbar" className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 lg:px-6 shadow-sm z-50 flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-gradient-to-br from-trampo-500 to-trampo-700 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-trampo-500/20 transform hover:rotate-3 transition-transform">T</div>
           <span className="font-display font-bold text-xl tracking-tight text-slate-800 dark:text-white hidden md:inline">Trampo-lin</span>
@@ -258,9 +258,9 @@ const App: React.FC = () => {
       </nav>
 
       {/* Main Layout */}
-      <main className="flex-1 flex overflow-hidden relative print:overflow-visible print:block print:h-auto">
-        {/* Editor Sidebar */}
-        <div className={`w-full md:w-[480px] lg:w-[520px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 h-full overflow-hidden print:hidden z-10 flex-shrink-0 shadow-xl transition-transform duration-300 absolute md:relative ${showMobilePreview ? '-translate-x-full md:translate-x-0' : 'translate-x-0'}`}>
+      <main className="flex-1 flex overflow-hidden relative">
+        {/* Editor Sidebar - ID ADICIONADO */}
+        <div id="editor-sidebar" className={`w-full md:w-[480px] lg:w-[520px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 h-full overflow-hidden z-10 flex-shrink-0 shadow-xl transition-transform duration-300 absolute md:relative ${showMobilePreview ? '-translate-x-full md:translate-x-0' : 'translate-x-0'}`}>
             <Editor 
               data={resumeData} 
               onChange={setResumeData} 
@@ -269,16 +269,16 @@ const App: React.FC = () => {
             />
         </div>
 
-        {/* Preview Area */}
-        <div className={`flex-1 bg-slate-100/50 dark:bg-slate-950 overflow-hidden relative flex flex-col items-center justify-center print:bg-white print:overflow-visible print:block print:h-auto print:static w-full absolute md:relative h-full transition-transform duration-300 ${showMobilePreview ? 'translate-x-0 z-20 bg-white' : 'translate-x-full md:translate-x-0'}`}>
+        {/* Preview Area - ID ADICIONADO */}
+        <div id="preview-area" className={`flex-1 bg-slate-100/50 dark:bg-slate-950 overflow-hidden relative flex flex-col items-center justify-center w-full absolute md:relative h-full transition-transform duration-300 ${showMobilePreview ? 'translate-x-0 z-20 bg-white' : 'translate-x-full md:translate-x-0'}`}>
           
           {/* Background Grid Pattern - Hidden on print */}
           <div className="absolute inset-0 z-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none print:hidden" style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
 
-          <div className="w-full h-full overflow-auto flex items-start justify-center p-4 md:p-12 custom-scrollbar relative z-10 pb-24 print:p-0 print:pb-0 print:overflow-visible print:block print:h-auto">
+          <div id="preview-scroll-container" className="w-full h-full overflow-auto flex items-start justify-center p-4 md:p-12 custom-scrollbar relative z-10 pb-24">
               {/* Theme Selector Modal (Existing) */}
               {showThemeSelector && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 z-50 animate-in slide-in-from-top-4 duration-300 w-[95%] max-w-4xl theme-selector-modal print:hidden">
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 z-50 animate-in slide-in-from-top-4 duration-300 w-[95%] max-w-4xl theme-selector-modal">
                    <div className="flex justify-between items-center mb-6">
                       <div>
                         <h3 className="font-bold text-lg dark:text-white">Galeria de Temas</h3>
