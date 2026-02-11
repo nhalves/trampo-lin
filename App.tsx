@@ -4,7 +4,7 @@ import { Editor } from './components/Editor/Editor';
 import { Preview } from './components/Preview/Preview';
 import { ResumeData, ThemeId } from './types';
 import { INITIAL_RESUME, THEMES } from './constants';
-import { Printer, Download, Upload, RotateCcw, Palette, Layout, Moon, Sun, Save, FileText, ZoomIn, ZoomOut, UserPlus, Menu } from 'lucide-react';
+import { Printer, Download, Upload, RotateCcw, Palette, Layout, Moon, Sun, Save, FileText, ZoomIn, ZoomOut, UserPlus, Menu, Eye, EyeOff, FileType } from 'lucide-react';
 
 const Toast = ({ message, onClose }: { message: string, onClose: () => void }) => {
   useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]);
@@ -53,10 +53,31 @@ const App: React.FC = () => {
     document.title = resumeData.personalInfo.fullName ? `Editando: ${resumeData.personalInfo.fullName}` : 'Trampo-lin | Editor';
   }, [resumeData]);
 
+  // Global Shortcuts
+  useEffect(() => {
+      const handleGlobalKeyDown = (e: KeyboardEvent) => {
+          if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+              e.preventDefault();
+              handlePrint();
+          }
+          if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+              e.preventDefault();
+              setToastMessage("Salvo automaticamente!");
+          }
+      };
+      window.addEventListener('keydown', handleGlobalKeyDown);
+      return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [resumeData]);
+
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
     document.documentElement.classList.toggle('dark');
     localStorage.setItem('trampolin_dark', (!darkMode).toString());
+  };
+
+  const togglePrivacyMode = () => {
+      setResumeData(prev => ({ ...prev, settings: { ...prev.settings, privacyMode: !prev.settings.privacyMode } }));
+      setToastMessage(resumeData.settings.privacyMode ? "Modo Privacidade Desativado" : "Modo Privacidade Ativado");
   };
 
   const saveProfile = () => {
@@ -95,6 +116,25 @@ const App: React.FC = () => {
       document.title = `Curriculo-${sanitizedName}-${sanitizedJob}`;
       window.print();
       document.title = oldTitle;
+  };
+
+  const handleTxtExport = () => {
+      let text = `Nome: ${resumeData.personalInfo.fullName}\n`;
+      text += `Cargo: ${resumeData.personalInfo.jobTitle}\n`;
+      text += `Email: ${resumeData.personalInfo.email}\n`;
+      text += `Resumo: ${resumeData.personalInfo.summary}\n\n`;
+      
+      text += `EXPERIÊNCIA\n`;
+      resumeData.experience.forEach(exp => {
+          text += `${exp.role} em ${exp.company} (${exp.startDate} - ${exp.endDate || 'Atual'})\n${exp.description}\n\n`;
+      });
+      
+      const blob = new Blob([text], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `curriculo-texto.txt`;
+      a.click();
   };
 
   return (
@@ -136,10 +176,11 @@ const App: React.FC = () => {
              )}
            </div>
 
-           <button onClick={toggleDarkMode} className="p-2.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">{darkMode ? <Sun size={18}/> : <Moon size={18}/>}</button>
-           
            <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block"></div>
 
+           <button onClick={togglePrivacyMode} className={`p-2.5 rounded-xl transition-colors ${resumeData.settings.privacyMode ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`} title="Modo Privacidade (Blur)"><EyeOff size={18}/></button>
+           <button onClick={toggleDarkMode} className="p-2.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">{darkMode ? <Sun size={18}/> : <Moon size={18}/>}</button>
+           
            <div className="hidden sm:flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
                <button onClick={() => setPreviewMode('resume')} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${previewMode === 'resume' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white ring-1 ring-black/5' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>CV</button>
                <button onClick={() => setPreviewMode('cover')} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${previewMode === 'cover' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white ring-1 ring-black/5' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>CARTA</button>
@@ -196,6 +237,8 @@ const App: React.FC = () => {
 
           {/* Floating Controls */}
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md p-2 rounded-2xl shadow-xl border border-white/20 dark:border-slate-700/50 print:hidden z-40">
+             <button onClick={handleTxtExport} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-colors" title="Exportar TXT"><FileType size={18}/></button>
+             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
              <button onClick={() => setZoom(z => Math.max(z - 0.1, 0.3))} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-colors" title="Diminuir Zoom"><ZoomOut size={18}/></button>
              <span className="text-xs font-bold w-12 text-center tabular-nums text-slate-600 dark:text-slate-300">{Math.round(zoom * 100)}%</span>
              <button onClick={() => setZoom(z => Math.min(z + 0.1, 1.5))} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-colors" title="Aumentar Zoom"><ZoomIn size={18}/></button>

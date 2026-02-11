@@ -5,20 +5,20 @@ export const INITIAL_RESUME: ResumeData = {
   id: 'default',
   profileName: 'Meu Currículo Principal',
   personalInfo: {
-    fullName: 'Ana Silva',
-    jobTitle: 'Gerente de Produto Sênior',
-    email: 'ana.silva@exemplo.com',
-    phone: '(11) 99999-8888',
-    address: 'São Paulo, SP',
-    website: 'anasilva.dev',
-    linkedin: 'linkedin.com/in/anasilva',
-    github: 'github.com/anasilva',
+    fullName: '',
+    jobTitle: '',
+    email: '',
+    phone: '',
+    address: '',
+    website: '',
+    linkedin: '',
+    github: '',
     twitter: '',
     behance: '',
     dribbble: '',
     medium: '',
     photoUrl: '',
-    summary: 'Gerente de Produto com mais de 8 anos de experiência liderando equipes ágeis e lançando produtos digitais de sucesso. Especialista em estratégia de produto, design thinking e análise de dados para otimização de conversão. Apaixonada por criar soluções centradas no usuário.',
+    summary: '',
   },
   coverLetter: {
     recipientName: 'Gestor de Contratação',
@@ -26,55 +26,21 @@ export const INITIAL_RESUME: ResumeData = {
     jobTitle: '',
     content: ''
   },
-  experience: [
-    {
-      id: '1',
-      role: 'Head de Produto',
-      company: 'TechFlow Solutions',
-      location: 'São Paulo, SP',
-      startDate: '2021-03',
-      endDate: '',
-      current: true,
-      description: 'Lidero uma equipe de 15 PMs e Designers. Aumentei a receita recorrente em 40% através do lançamento de novas features estratégicas. Implementei cultura de discovery contínuo.',
-    },
-    {
-      id: '2',
-      role: 'Product Owner',
-      company: 'InovaSoft',
-      location: 'Rio de Janeiro, RJ',
-      startDate: '2018-01',
-      endDate: '2021-02',
-      current: false,
-      description: 'Responsável pelo ciclo de vida do aplicativo móvel. Gerenciei backlog, priorização e roadmap. Reduzi o churn em 15% melhorando a experiência de onboarding.',
-    }
-  ],
-  education: [
-    {
-      id: '1',
-      school: 'Universidade de São Paulo (USP)',
-      degree: 'Bacharelado em Administração',
-      location: 'São Paulo',
-      startDate: '2013-02',
-      endDate: '2017-12',
-      description: 'Foco em Marketing e Estratégia.'
-    }
-  ],
+  experience: [],
+  education: [],
   projects: [],
   certifications: [],
   volunteer: [],
   awards: [],
   references: [],
   customSections: [],
-  skills: [
-    { id: '1', name: 'Gestão de Produto', level: 5 },
-    { id: '2', name: 'Scrum & Agile', level: 5 },
-    { id: '3', name: 'Figma', level: 4 },
-  ],
-  languages: ['Português (Nativo)', 'Inglês (Fluente)'],
+  skills: [],
+  languages: [],
   settings: {
     fontScale: 1,
     spacingScale: 1,
     marginScale: 1,
+    lineHeight: 1.5,
     sectionOrder: ['experience', 'education', 'skills', 'projects', 'certifications', 'languages', 'volunteer', 'awards', 'references', 'custom'],
     visibleSections: {
       experience: true,
@@ -94,12 +60,78 @@ export const INITIAL_RESUME: ResumeData = {
     headerFont: 'font-sans',
     bodyFont: 'font-sans',
     headerStyle: 'simple',
+    headerAlignment: 'left',
+    photoShape: 'rounded',
     skillStyle: 'tags',
     showQrCode: false,
     compactMode: false,
-    showDuration: true
+    showDuration: true,
+    grayscale: false,
+    privacyMode: false,
+    aiTone: 'professional'
   }
 };
+
+export const EXAMPLE_PERSONAS: ResumeData[] = [
+    {
+        ...INITIAL_RESUME,
+        id: 'dev-example',
+        profileName: 'Exemplo: Desenvolvedor Fullstack',
+        personalInfo: {
+            fullName: 'Lucas Oliveira',
+            jobTitle: 'Senior Fullstack Developer',
+            email: 'lucas.dev@email.com',
+            phone: '(11) 98765-4321',
+            address: 'São Paulo, SP',
+            website: 'lucas.dev.br',
+            linkedin: 'linkedin.com/in/lucasdev',
+            github: 'github.com/lucasdev',
+            twitter: 'x.com/lucascode',
+            behance: '',
+            dribbble: '',
+            medium: 'medium.com/@lucasdev',
+            photoUrl: '',
+            summary: 'Desenvolvedor Fullstack com 6 anos de experiência em React, Node.js e arquitetura de microsserviços. Apaixonado por código limpo, performance e UX. Liderei a migração de sistemas legados para arquiteturas modernas em nuvem, reduzindo custos em 30%.',
+        },
+        experience: [
+            { id: '1', role: 'Tech Lead', company: 'Fintech X', location: 'Remoto', startDate: '2021-06', endDate: '', current: true, description: 'Lidero uma equipe de 8 desenvolvedores. Responsável pela arquitetura de novas features e code review. Implementei CI/CD que reduziu tempo de deploy em 50%.' },
+            { id: '2', role: 'Frontend Developer', company: 'Agência Web', location: 'São Paulo', startDate: '2018-01', endDate: '2021-05', current: false, description: 'Desenvolvimento de interfaces responsivas e acessíveis para grandes e-commerces. Uso intensivo de React e TypeScript.' }
+        ],
+        skills: [
+            { id: '1', name: 'React.js', level: 5 }, { id: '2', name: 'Node.js', level: 4 }, { id: '3', name: 'TypeScript', level: 5 }, { id: '4', name: 'AWS', level: 3 }
+        ],
+        languages: ['Português (Nativo)', 'Inglês (Avançado)']
+    },
+    {
+        ...INITIAL_RESUME,
+        id: 'mkt-example',
+        profileName: 'Exemplo: Marketing Digital',
+        personalInfo: {
+            fullName: 'Mariana Costa',
+            jobTitle: 'Especialista em Growth Marketing',
+            email: 'mari.mkt@email.com',
+            phone: '(21) 99999-1234',
+            address: 'Rio de Janeiro, RJ',
+            website: 'maricosta.com',
+            linkedin: 'linkedin.com/in/maricosta',
+            github: '',
+            twitter: 'x.com/marigrowth',
+            behance: '',
+            dribbble: '',
+            medium: '',
+            photoUrl: '',
+            summary: 'Especialista em Marketing Digital focada em Growth Hacking e CRM. Histórico comprovado de aumento de ROI em campanhas pagas e orgânicas. Certificada em Google Ads e Analytics. Criativa, orientada a dados e excelente comunicadora.',
+        },
+        experience: [
+            { id: '1', role: 'Growth Manager', company: 'Startup Y', location: 'Rio de Janeiro', startDate: '2022-01', endDate: '', current: true, description: 'Gestão de budget mensal de R$ 500k. Aumentei a taxa de conversão em 25% através de testes A/B rigorosos.' },
+            { id: '2', role: 'Analista de Marketing', company: 'Corp Z', location: 'São Paulo', startDate: '2019-03', endDate: '2021-12', current: false, description: 'Responsável por Email Marketing e automação. Criei réguas de relacionamento que aumentaram a retenção de clientes em 15%.' }
+        ],
+        skills: [
+            { id: '1', name: 'Google Ads', level: 5 }, { id: '2', name: 'SEO', level: 4 }, { id: '3', name: 'Copywriting', level: 5 }, { id: '4', name: 'Data Analysis', level: 4 }
+        ],
+        languages: ['Português (Nativo)', 'Espanhol (Intermediário)']
+    }
+];
 
 export const THEMES: ThemeConfig[] = [
   // --- NOVOS TEMAS DIFERENCIADOS ---

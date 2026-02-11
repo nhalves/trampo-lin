@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ResumeData, ThemeConfig, ResumeSettings, Skill } from '../../types';
 import { MapPin, Mail, Phone, Linkedin, Globe, Github, Twitter, ExternalLink, Dribbble, Youtube, Facebook, Instagram, Hash, Star, Code, Heart, PenTool, Award } from 'lucide-react';
@@ -8,6 +9,30 @@ interface PreviewProps {
   mode?: 'resume' | 'cover';
   zoom: number;
 }
+
+const MarkdownText = ({ text }: { text: string }) => {
+    if (!text) return null;
+    
+    // Simple parser for **bold**, *italic*, and newlines
+    const lines = text.split('\n');
+    return (
+        <>
+            {lines.map((line, i) => {
+                const parts = line.split(/(\*\*.*?\*\*|\*.*?\*)/g);
+                const renderedLine = parts.map((part, j) => {
+                    if (part.startsWith('**') && part.endsWith('**')) {
+                        return <strong key={j}>{part.slice(2, -2)}</strong>;
+                    }
+                    if (part.startsWith('*') && part.endsWith('*')) {
+                        return <em key={j}>{part.slice(1, -1)}</em>;
+                    }
+                    return part;
+                });
+                return <span key={i} className="block min-h-[1em]">{renderedLine}</span>;
+            })}
+        </>
+    );
+};
 
 const SkillItem: React.FC<{ skill: Skill; settings: ResumeSettings; primary: string; accent: string; dark?: boolean }> = ({ skill, settings, primary, accent, dark }) => {
   if (settings.skillStyle === 'hidden') {
@@ -33,11 +58,24 @@ const SkillItem: React.FC<{ skill: Skill; settings: ResumeSettings; primary: str
         </div>
       );
   }
+  if (settings.skillStyle === 'circles') {
+      return (
+          <div className="flex flex-col items-center justify-center text-center w-20 mb-3 break-inside-avoid">
+              <div className="relative w-12 h-12 mb-1 flex items-center justify-center">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                      <path className={`${dark ? 'text-slate-700' : 'text-slate-200'}`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
+                      <path className="print:print-color-adjust-exact" style={{ color: primary }} strokeDasharray={`${skill.level * 20}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
+                  </svg>
+                  <span className="absolute text-[10px] font-bold">{skill.level}</span>
+              </div>
+              <span className={`text-[10px] leading-tight ${dark ? 'text-slate-300' : 'text-slate-700'}`}>{skill.name}</span>
+          </div>
+      );
+  }
   // Tag Style
   return <span className={`px-2 py-1 rounded text-xs font-medium inline-block border break-inside-avoid print:print-color-adjust-exact ${dark ? 'border-slate-700 text-slate-300' : 'bg-opacity-10'}`} style={{ backgroundColor: dark ? 'transparent' : `${accent}1a`, color: dark ? undefined : primary, borderColor: dark ? accent : 'transparent' }}>{skill.name}</span>;
 };
 
-// Helper para detectar ícone e sanitizar link
 const getIconForUrl = (url: string, defaultIcon: any) => {
     if (!url) return defaultIcon;
     const lower = url.toLowerCase();
@@ -59,7 +97,7 @@ const sanitizeLink = (link: string) => {
     return `https://${link}`;
 };
 
-const ContactItem = ({ icon: Icon, text, link, primary, className }: { icon: any, text: string, link?: string, primary: string, className?: string }) => {
+const ContactItem = ({ icon: Icon, text, link, primary, className, privacyMode }: { icon: any, text: string, link?: string, primary: string, className?: string, privacyMode?: boolean }) => {
   if (!text) return null;
   const DisplayIcon = link ? getIconForUrl(link, Icon) : Icon;
   const safeLink = link ? sanitizeLink(link) : undefined;
@@ -68,9 +106,9 @@ const ContactItem = ({ icon: Icon, text, link, primary, className }: { icon: any
     <div className={`flex items-center gap-1.5 mb-1 text-xs ${className} break-inside-avoid`}>
       <DisplayIcon size={12} className="flex-shrink-0 print:text-black" style={{ color: primary }} />
       {safeLink ? (
-          <a href={safeLink} target="_blank" rel="noreferrer" className="hover:underline truncate print:text-black print:no-underline">{text}</a>
+          <a href={safeLink} target="_blank" rel="noreferrer" className={`hover:underline truncate print:text-black print:no-underline ${privacyMode ? 'blur-[3px] select-none' : ''}`}>{text}</a>
       ) : (
-          <span className="truncate">{text}</span>
+          <span className={`truncate ${privacyMode ? 'blur-[3px] select-none' : ''}`}>{text}</span>
       )}
     </div>
   );
@@ -95,33 +133,28 @@ const SectionTitle = ({ title, font, accent, primary, style = 'simple', dark, gr
       inlineStyles.WebkitTextFillColor = 'transparent';
       inlineStyles.borderBottom = `1px solid ${accent}40`;
   } else {
-      // Simple default
       inlineStyles.borderBottom = `1px solid ${dark ? '#333' : '#e2e8f0'}`;
   }
 
   return <h3 className={classes} style={inlineStyles}>{title}</h3>;
 };
 
-// Date Formatter Helper
 const DateDisplay = ({ date, formatStr }: { date: string, formatStr?: string }) => {
   if (!date) return null;
   
   let parsedDate: Date | null = null;
   
   try {
-     // Handle specific user input formats manually to avoid timezone issues
      if (date.match(/^\d{4}-\d{2}$/)) { 
-         // yyyy-MM
          const [y, m] = date.split('-').map(Number);
          parsedDate = new Date(y, m - 1);
      } else if (date.match(/^\d{2}\/\d{4}$/)) { 
-         // MM/yyyy
          const [m, y] = date.split('/').map(Number);
          parsedDate = new Date(y, m - 1);
      } else if (date.match(/^\d{4}$/)) {
          return <span>{date}</span>;
      } else {
-         return <span>{date}</span>; // Fallback
+         return <span>{date}</span>; 
      }
      
      if (!parsedDate || isNaN(parsedDate.getTime())) return <span>{date}</span>;
@@ -134,11 +167,9 @@ const DateDisplay = ({ date, formatStr }: { date: string, formatStr?: string }) 
          return <span>{m}/{parsedDate.getFullYear()}</span>;
      }
      if (formatStr === 'full') {
-         // Janeiro 2023
          return <span>{new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(parsedDate)}</span>;
      }
      
-     // Default: MMM yyyy (jan 2023)
      return <span className="capitalize">{new Intl.DateTimeFormat(locale, { month: 'short', year: 'numeric' }).format(parsedDate).replace('.', '')}</span>;
 
   } catch (e) {
@@ -160,7 +191,7 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
     '--bg': colors.bg,
     '--accent': colors.accent,
     fontSize: `${settings.fontScale * 0.875}rem`,
-    lineHeight: settings.spacingScale * 1.5,
+    lineHeight: settings.lineHeight || settings.spacingScale * 1.5, // Updated
     transform: `scale(${zoom})`,
     transformOrigin: 'top left',
     width: `calc(100% / ${zoom})`,
@@ -204,7 +235,9 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
                       )}
                    </div>
                    <div className="text-sm font-semibold mb-2" style={{color: colors.accent}}>{exp.company} {exp.location && `• ${exp.location}`}</div>
-                   <p className={`text-sm opacity-90 whitespace-pre-line text-justify ${bodyFontClass}`} style={{color: isDarkTheme ? '#ccc' : 'var(--text)'}}>{exp.description}</p>
+                   <div className={`text-sm opacity-90 text-justify ${bodyFontClass}`} style={{color: isDarkTheme ? '#ccc' : 'var(--text)'}}>
+                       <MarkdownText text={exp.description} />
+                   </div>
                 </div>
               ))}
             </div>
@@ -228,7 +261,7 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
           return (
             <div className="mb-6 group-section break-inside-avoid">
               <SectionTitle title="Habilidades" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} dark={isDarkTheme} gradient={theme.gradient} />
-              <div className={`flex flex-wrap ${settings.skillStyle === 'tags' ? 'gap-2' : settings.skillStyle === 'hidden' ? 'block' : 'flex-col gap-1'}`}>
+              <div className={`flex flex-wrap ${settings.skillStyle === 'tags' || settings.skillStyle === 'circles' ? 'gap-2' : settings.skillStyle === 'hidden' ? 'block' : 'flex-col gap-1'}`}>
                 {data.skills.map(s => <SkillItem key={s.id} skill={s} settings={settings} primary={primaryColor} accent={colors.accent} dark={isDarkTheme} />)}
               </div>
             </div>
@@ -244,7 +277,7 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
                         {p.name} 
                         {p.url && <a href={sanitizeLink(p.url)} target="_blank" rel="noreferrer" className="text-blue-500 print:text-black print:no-underline"><ExternalLink size={10}/></a>}
                     </div>
-                    <p className="text-sm opacity-90">{p.description}</p>
+                    <div className="text-sm opacity-90"><MarkdownText text={p.description} /></div>
                  </div>
                ))}
              </div>
@@ -314,7 +347,7 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
                    <div key={item.id} className="mb-2 break-inside-avoid">
                       <div className="font-bold">{item.title}</div>
                       <div className="text-xs opacity-70 mb-1">{item.subtitle}</div>
-                      <p className="text-sm opacity-90 whitespace-pre-line">{item.description}</p>
+                      <div className="text-sm opacity-90 whitespace-pre-line"><MarkdownText text={item.description} /></div>
                    </div>
                  ))}
                </div>
@@ -326,27 +359,45 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
   };
 
   const ContactList = ({ vertical = false, className = '' }) => (
-     <div className={`flex ${vertical ? 'flex-col gap-1' : 'flex-wrap gap-x-4 gap-y-1 justify-center'} text-sm opacity-90 ${className}`} style={{color: isDarkTheme ? '#ccc' : 'var(--text)'}}>
-        <ContactItem icon={Mail} text={data.personalInfo.email} primary={primaryColor} />
-        <ContactItem icon={Phone} text={data.personalInfo.phone} primary={primaryColor} />
-        <ContactItem icon={MapPin} text={data.personalInfo.address} primary={primaryColor} />
+     <div className={`flex ${vertical ? 'flex-col gap-1' : 'flex-wrap gap-x-4 gap-y-1'} text-sm opacity-90 ${className} ${settings.headerAlignment === 'center' && !vertical ? 'justify-center' : settings.headerAlignment === 'right' && !vertical ? 'justify-end' : ''}`} style={{color: isDarkTheme ? '#ccc' : 'var(--text)'}}>
+        <ContactItem icon={Mail} text={data.personalInfo.email} primary={primaryColor} privacyMode={settings.privacyMode} />
+        <ContactItem icon={Phone} text={data.personalInfo.phone} primary={primaryColor} privacyMode={settings.privacyMode} />
+        <ContactItem icon={MapPin} text={data.personalInfo.address} primary={primaryColor} privacyMode={settings.privacyMode} />
         <ContactItem icon={Linkedin} text={data.personalInfo.linkedin} link={data.personalInfo.linkedin} primary={primaryColor} />
         <ContactItem icon={Github} text={data.personalInfo.github} link={data.personalInfo.github} primary={primaryColor} />
         <ContactItem icon={Globe} text={data.personalInfo.website} link={data.personalInfo.website} primary={primaryColor} />
+        <ContactItem icon={Twitter} text={data.personalInfo.twitter} link={data.personalInfo.twitter} primary={primaryColor} />
+        <ContactItem icon={Hash} text={data.personalInfo.behance} link={data.personalInfo.behance} primary={primaryColor} />
      </div>
   );
 
+  const getPhotoClasses = () => {
+      switch(settings.photoShape) {
+          case 'circle': return 'rounded-full';
+          case 'rounded': return 'rounded-xl';
+          default: return 'rounded-none';
+      }
+  };
+
+  const getAlignmentClasses = () => {
+      switch(settings.headerAlignment) {
+          case 'center': return 'text-center items-center';
+          case 'right': return 'text-right items-end';
+          default: return 'text-left items-start';
+      }
+  };
+
   const renderSingleColumn = () => (
     <div className={`p-${8 * settings.marginScale} max-w-3xl mx-auto h-full`}>
-       <div className="text-center mb-8">
-          {data.personalInfo.photoUrl && <img src={data.personalInfo.photoUrl} className="w-24 h-24 rounded-full mx-auto mb-4 object-cover border-4 border-white shadow-sm"/>}
+       <div className={`flex flex-col mb-8 ${getAlignmentClasses()}`}>
+          {data.personalInfo.photoUrl && <img src={data.personalInfo.photoUrl} className={`w-24 h-24 mb-4 object-cover border-4 border-white shadow-sm ${getPhotoClasses()}`}/>}
           <h1 className={`text-4xl font-bold mb-2 uppercase tracking-tight ${headerFontClass}`} style={{color: primaryColor}}>{data.personalInfo.fullName}</h1>
           <p className={`text-xl mb-4 ${bodyFontClass}`} style={{color: colors.accent}}>{data.personalInfo.jobTitle}</p>
           <ContactList />
        </div>
        {data.settings.visibleSections.summary && data.personalInfo.summary && (
-         <div className="mb-8 text-center px-8">
-            <p className={`text-sm leading-relaxed opacity-80 ${bodyFontClass}`}>{data.personalInfo.summary}</p>
+         <div className={`mb-8 ${settings.headerAlignment === 'center' ? 'text-center px-8' : ''}`}>
+            <div className={`text-sm leading-relaxed opacity-80 ${bodyFontClass}`}><MarkdownText text={data.personalInfo.summary} /></div>
          </div>
        )}
        {data.settings.sectionOrder.map(id => renderSection(id))}
@@ -356,8 +407,8 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
   const renderSidebarLeft = () => (
     <div className="flex h-full">
        <div className={`w-[32%] p-${6 * settings.marginScale} flex flex-col gap-6 text-white h-full print:print-color-adjust-exact`} style={{backgroundColor: theme.id === 'timeline-pro' ? '#f8fafc' : colors.primary, color: theme.id === 'timeline-pro' ? '#334155' : '#fff'}}>
-          <div className="text-center">
-             {data.personalInfo.photoUrl && <img src={data.personalInfo.photoUrl} className="w-32 h-32 rounded-full mx-auto mb-4 object-cover border-4 border-white/20"/>}
+          <div className="text-center flex flex-col items-center">
+             {data.personalInfo.photoUrl && <img src={data.personalInfo.photoUrl} className={`w-32 h-32 mb-4 object-cover border-4 border-white/20 ${getPhotoClasses()}`}/>}
              {theme.id === 'timeline-pro' ? null : (
                <>
                  <h2 className="font-bold text-xl mb-1">{data.personalInfo.fullName}</h2>
@@ -368,11 +419,12 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
           
           <div className="flex flex-col gap-2 text-sm opacity-90">
              <div className="font-bold uppercase tracking-wider mb-2 border-b border-white/20 pb-1">Contato</div>
-             <ContactItem icon={Mail} text={data.personalInfo.email} primary={theme.id==='timeline-pro' ? primaryColor : '#fff'} />
-             <ContactItem icon={Phone} text={data.personalInfo.phone} primary={theme.id==='timeline-pro' ? primaryColor : '#fff'} />
-             <ContactItem icon={MapPin} text={data.personalInfo.address} primary={theme.id==='timeline-pro' ? primaryColor : '#fff'} />
+             <ContactItem icon={Mail} text={data.personalInfo.email} primary={theme.id==='timeline-pro' ? primaryColor : '#fff'} privacyMode={settings.privacyMode} />
+             <ContactItem icon={Phone} text={data.personalInfo.phone} primary={theme.id==='timeline-pro' ? primaryColor : '#fff'} privacyMode={settings.privacyMode} />
+             <ContactItem icon={MapPin} text={data.personalInfo.address} primary={theme.id==='timeline-pro' ? primaryColor : '#fff'} privacyMode={settings.privacyMode} />
              <ContactItem icon={Linkedin} text={data.personalInfo.linkedin} primary={theme.id==='timeline-pro' ? primaryColor : '#fff'} link={data.personalInfo.linkedin} />
              <ContactItem icon={Globe} text={data.personalInfo.website} primary={theme.id==='timeline-pro' ? primaryColor : '#fff'} link={data.personalInfo.website} />
+             <ContactItem icon={Twitter} text={data.personalInfo.twitter} primary={theme.id==='timeline-pro' ? primaryColor : '#fff'} link={data.personalInfo.twitter} />
           </div>
 
           <div className="mt-4">
@@ -391,7 +443,7 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
           {data.settings.visibleSections.summary && data.personalInfo.summary && (
              <div className="mb-8">
                 <SectionTitle title="Resumo" font={headerFontClass} accent={colors.accent} primary={primaryColor} style={settings.headerStyle} gradient={theme.gradient} />
-                <p className="text-sm leading-relaxed opacity-80">{data.personalInfo.summary}</p>
+                <div className="text-sm leading-relaxed opacity-80"><MarkdownText text={data.personalInfo.summary} /></div>
              </div>
           )}
           {data.settings.sectionOrder.filter(id => !['skills','languages','awards'].includes(id)).map(id => renderSection(id))}
@@ -416,7 +468,7 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
               {data.settings.visibleSections.summary && data.personalInfo.summary && (
                  <div className="mb-8">
                     <h3 className="font-bold text-sm uppercase mb-2 border-t-2 border-black pt-1">Sobre</h3>
-                    <p className="text-sm leading-relaxed">{data.personalInfo.summary}</p>
+                    <div className="text-sm leading-relaxed"><MarkdownText text={data.personalInfo.summary} /></div>
                  </div>
               )}
               {renderSection('skills')}
@@ -441,7 +493,7 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
         <div className="absolute top-20 left-10 w-20 h-20 rounded-lg rotate-12 opacity-5" style={{backgroundColor: colors.secondary}}></div>
 
         <div className="relative z-10 flex flex-col items-center mb-10">
-           {data.personalInfo.photoUrl && <img src={data.personalInfo.photoUrl} className="w-28 h-28 rounded-2xl shadow-lg mb-4 object-cover"/>}
+           {data.personalInfo.photoUrl && <img src={data.personalInfo.photoUrl} className={`w-28 h-28 shadow-lg mb-4 object-cover ${getPhotoClasses()}`}/>}
            <h1 className={`text-4xl font-bold mb-1 ${headerFontClass}`}>{data.personalInfo.fullName}</h1>
            <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-white shadow-sm print:border" style={{color: colors.accent}}>{data.personalInfo.jobTitle}</span>
            <div className="mt-4 p-3 bg-white/50 backdrop-blur-sm rounded-xl shadow-sm border border-white print:border-slate-200">
@@ -458,7 +510,7 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
               {data.settings.visibleSections.summary && data.personalInfo.summary && (
                  <div className="mb-6 p-4 bg-white rounded-xl shadow-sm border border-slate-100 print:border-slate-200 break-inside-avoid">
                     <h3 className="font-bold text-sm uppercase mb-2" style={{color: colors.primary}}>Resumo</h3>
-                    <p className="text-sm opacity-80">{data.personalInfo.summary}</p>
+                    <p className="text-sm opacity-80"><MarkdownText text={data.personalInfo.summary} /></p>
                  </div>
               )}
               {renderSection('education')}
@@ -497,7 +549,12 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume', 
   if (theme.id === 'tech-dark') Content = renderSingleColumn; 
 
   return (
-    <div className={`w-full h-full overflow-hidden shadow-2xl ring-1 ring-slate-900/5 transition-shadow duration-500 bg-white`} style={{...style, backgroundColor: isDarkTheme ? '#0f172a' : '#fff'}}>
+    <div className={`w-full h-full overflow-hidden shadow-2xl ring-1 ring-slate-900/5 transition-shadow duration-500 bg-white relative ${settings.grayscale ? 'grayscale' : ''}`} style={{...style, backgroundColor: isDarkTheme ? '#0f172a' : '#fff'}}>
+        {/* Page Guide Overlay */}
+        <div className="absolute top-[1122px] left-0 w-full border-b-2 border-dashed border-red-300 opacity-50 z-50 pointer-events-none print:hidden flex items-center justify-center">
+            <span className="bg-red-100 text-red-500 text-[10px] px-1">Fim da Página 1 (A4)</span>
+        </div>
+        
         <Content />
         {settings.showQrCode && data.personalInfo.linkedin && (
            <div className="absolute top-4 right-4 print:block hidden">

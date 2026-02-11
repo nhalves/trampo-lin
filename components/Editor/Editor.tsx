@@ -1,9 +1,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ResumeData, ResumeSettings } from '../../types';
-import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Wand2, Eye, EyeOff, ArrowUp, ArrowDown, Settings, Briefcase, GraduationCap, Medal, Code, User, Languages, FileText, Search, QrCode, Heart, Award, Users, FilePlus, Copy, Eraser, Languages as LangIcon, Upload, X, Type, Undo2, Redo2, Download, RefreshCw, Star, Globe, PenTool, CheckCircle2, AlertCircle, FileUp, Calendar, Link2, Mail, Phone, MapPin, FileJson } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Wand2, Eye, EyeOff, ArrowUp, ArrowDown, Settings, Briefcase, GraduationCap, Medal, Code, User, Languages, FileText, Search, QrCode, Heart, Award, Users, FilePlus, Copy, Eraser, Languages as LangIcon, Upload, X, Type, Undo2, Redo2, Download, RefreshCw, Star, Globe, PenTool, CheckCircle2, AlertCircle, FileUp, Calendar, Link2, Mail, Phone, MapPin, FileJson, Twitter, Dribbble, Hash, Bold, Italic, List, Linkedin } from 'lucide-react';
 import { improveText, generateSummary, suggestSkills, generateCoverLetter, analyzeJobMatch, translateText, generateBulletPoints, extractResumeFromPdf } from '../../services/geminiService';
-import { AVAILABLE_FONTS, INITIAL_RESUME, FONT_PAIRINGS } from '../../constants';
+import { AVAILABLE_FONTS, INITIAL_RESUME, FONT_PAIRINGS, EXAMPLE_PERSONAS } from '../../constants';
 
 interface EditorProps {
   data: ResumeData;
@@ -26,8 +26,26 @@ const CUSTOM_ICONS = [
   { id: 'award', icon: Award, label: 'Prêmio' }
 ];
 
+// Helper: Date Mask (MM/YYYY)
+const handleDateInput = (value: string) => {
+    let v = value.replace(/\D/g, '').slice(0, 6);
+    if (v.length >= 3) {
+        return `${v.slice(0, 2)}/${v.slice(2)}`;
+    }
+    return v;
+};
+
+// UI: Markdown Toolbar
+const MarkdownToolbar = ({ targetId, onInsert }: { targetId: string, onInsert: (char: string, wrap?: boolean) => void }) => (
+    <div className="flex gap-1 mb-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg w-fit">
+        <button onClick={() => onInsert('**', true)} className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Negrito"><Bold size={12}/></button>
+        <button onClick={() => onInsert('*', true)} className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Itálico"><Italic size={12}/></button>
+        <button onClick={() => onInsert('\n• ', false)} className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Lista"><List size={12}/></button>
+    </div>
+);
+
 // Utility: Auto-resize textarea
-const AutoResizeTextarea = ({ value, onChange, placeholder, className }: any) => {
+const AutoResizeTextarea = ({ value, onChange, placeholder, className, id }: any) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
@@ -37,15 +55,45 @@ const AutoResizeTextarea = ({ value, onChange, placeholder, className }: any) =>
         }
     }, [value]);
 
+    const handleInsert = (char: string, wrap: boolean) => {
+        if (!textareaRef.current) return;
+        const start = textareaRef.current.selectionStart;
+        const end = textareaRef.current.selectionEnd;
+        const text = value;
+        let newText = '';
+        
+        if (wrap) {
+            newText = text.substring(0, start) + char + text.substring(start, end) + char + text.substring(end);
+        } else {
+            newText = text.substring(0, start) + char + text.substring(end);
+        }
+        
+        // Simular evento de change
+        const event = { target: { value: newText } };
+        onChange(event);
+        
+        // Restore focus (timeout needed for React re-render)
+        setTimeout(() => {
+            textareaRef.current?.focus();
+            textareaRef.current?.setSelectionRange(start + char.length, wrap ? end + char.length : start + char.length);
+        }, 0);
+    };
+
     return (
-        <textarea
-            ref={textareaRef}
-            className={`${className} resize-none overflow-hidden`}
-            value={value}
-            onChange={onChange}
-            placeholder={placeholder}
-            rows={1}
-        />
+        <div className="relative group">
+            <div className="opacity-0 group-focus-within:opacity-100 transition-opacity absolute -top-8 right-0 z-10">
+                <MarkdownToolbar targetId={id} onInsert={handleInsert} />
+            </div>
+            <textarea
+                id={id}
+                ref={textareaRef}
+                className={`${className} resize-none overflow-hidden`}
+                value={value}
+                onChange={onChange}
+                placeholder={placeholder}
+                rows={1}
+            />
+        </div>
     );
 };
 
@@ -83,7 +131,7 @@ const Section = ({ title, icon: Icon, children, isOpen, onToggle, isVisible, onV
 );
 
 // UI Component: Modern Input
-const Input = ({ label, value, onChange, type = "text", placeholder = "", step, disabled, icon: Icon }: any) => (
+const Input = ({ label, value, onChange, type = "text", placeholder = "", step, disabled, icon: Icon, isDate }: any) => (
   <div className="mb-1 w-full relative">
     <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 ml-1">{label}</label>
     <div className="relative">
@@ -94,7 +142,10 @@ const Input = ({ label, value, onChange, type = "text", placeholder = "", step, 
         placeholder={placeholder} 
         className={`w-full px-3 py-2.5 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-trampo-500/20 focus:border-trampo-500 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed dark:text-slate-100 placeholder:text-slate-400 ${Icon ? 'pl-9' : ''}`} 
         value={value} 
-        onChange={(e) => onChange(e.target.value)} 
+        onChange={(e) => {
+            const val = isDate ? handleDateInput(e.target.value) : e.target.value;
+            onChange(val);
+        }} 
         />
         {Icon && <Icon className="absolute left-3 top-2.5 text-slate-400" size={16} />}
     </div>
@@ -108,6 +159,7 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
   const [jobDescription, setJobDescription] = useState('');
   const [atsResult, setAtsResult] = useState<any>(null);
   const [atsFile, setAtsFile] = useState<{name: string, data: string, mimeType: string} | null>(null);
+  const [showExamples, setShowExamples] = useState(false);
   
   // Undo/Redo Stacks
   const [history, setHistory] = useState<ResumeData[]>([]);
@@ -125,6 +177,22 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
       setHistoryIndex(0);
     }
   }, []);
+
+  // Keyboard Shortcuts
+  useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+          if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+              e.preventDefault();
+              undo();
+          }
+          if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+              e.preventDefault();
+              redo();
+          }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [historyIndex, history]);
 
   // Handle Changes with History
   const handleChangeWithHistory = (newData: ResumeData) => {
@@ -254,6 +322,14 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
     }
   };
 
+  const loadExample = (example: ResumeData) => {
+      if(confirm('Carregar exemplo? Seus dados atuais não salvos serão perdidos.')) {
+          handleChangeWithHistory(example);
+          onShowToast("Exemplo carregado!");
+          setShowExamples(false);
+      }
+  };
+
   // --- Actions ---
   const handleImproveText = async (text: string, path: (val: string) => void) => {
     if (!text || text.length < 5) {
@@ -261,7 +337,7 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
         return;
     }
     setLoadingAI('improving');
-    const improved = await improveText(text);
+    const improved = await improveText(text, 'resume', data.settings.aiTone);
     path(improved);
     setLoadingAI(null);
     onShowToast("✨ Texto aprimorado!");
@@ -319,7 +395,6 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
       const extractedData = await extractResumeFromPdf(atsFile);
       
       if (extractedData) {
-          // Merge with initial structure to ensure settings are preserved but data is replaced
           handleChangeWithHistory({
               ...INITIAL_RESUME,
               personalInfo: { ...INITIAL_RESUME.personalInfo, ...extractedData.personalInfo },
@@ -327,10 +402,9 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
               education: extractedData.education || [],
               skills: extractedData.skills || [],
               languages: extractedData.languages || [],
-              // Preserve settings from current session if wanted, or reset. Here we reset to default theme but keep extracted data.
           });
           onShowToast("Currículo convertido para o Editor com sucesso!");
-          setActiveTab('resume'); // Switch back to editor
+          setActiveTab('resume');
       } else {
           onShowToast("Erro ao converter PDF. Tente novamente.");
       }
@@ -423,6 +497,7 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
                                 onChange={(v: string) => handleListChange(key, index, f.key, v)} 
                                 type="text" 
                                 placeholder="MM/AAAA" 
+                                isDate={true}
                                 disabled={f.key === 'endDate' && item.current}
                             />
                             {f.key === 'endDate' && key === 'experience' && (
@@ -463,6 +538,7 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
                     </div>
                  </div>
                  <AutoResizeTextarea 
+                    id={`desc-${key}-${index}`}
                     className="w-full p-3 border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-trampo-500/20 focus:border-trampo-500 outline-none transition-all leading-relaxed" 
                     value={item.description} 
                     onChange={(e: any) => handleListChange(key, index, 'description', e.target.value)} 
@@ -489,6 +565,17 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
             <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
                 <button onClick={() => jsonInputRef.current?.click()} className="p-1.5 rounded-md hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm transition-all text-slate-600 dark:text-slate-300" title="Importar Backup JSON"><Upload size={16}/></button>
                 <button onClick={handleJsonExport} className="p-1.5 rounded-md hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm transition-all text-slate-600 dark:text-slate-300" title="Exportar Backup JSON"><Download size={16}/></button>
+                <div className="relative">
+                    <button onClick={() => setShowExamples(!showExamples)} className="p-1.5 rounded-md hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm transition-all text-slate-600 dark:text-slate-300" title="Carregar Exemplo"><User size={16}/></button>
+                    {showExamples && (
+                        <div className="absolute top-full right-0 mt-2 bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-slate-700 rounded-lg p-1 min-w-[200px] z-50">
+                            <div className="text-[10px] font-bold text-slate-400 p-2">PERSONAS</div>
+                            {EXAMPLE_PERSONAS.map(ex => (
+                                <button key={ex.id} onClick={() => loadExample(ex)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md truncate">{ex.profileName}</button>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
             <button onClick={handleReset} className="p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors" title="Resetar Tudo"><RefreshCw size={16}/></button>
          </div>
@@ -535,20 +622,31 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
                    <Input label="Email" value={data.personalInfo.email} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, email: v } })} placeholder="nome@email.com" icon={Mail} />
                    <Input label="Telefone" value={data.personalInfo.phone} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, phone: v } })} placeholder="(11) 99999-9999" icon={Phone} />
                    <Input label="Endereço" value={data.personalInfo.address} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, address: v } })} placeholder="Cidade, Estado" icon={MapPin} />
-                   <Input label="LinkedIn (URL)" value={data.personalInfo.linkedin} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, linkedin: v } })} placeholder="linkedin.com/in/voce" />
-                   <Input label="Site / Portfólio" value={data.personalInfo.website} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, website: v } })} placeholder="seusite.com" />
-                   <Input label="GitHub / Outro" value={data.personalInfo.github} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, github: v } })} placeholder="github.com/voce" />
+                   <Input label="LinkedIn" value={data.personalInfo.linkedin} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, linkedin: v } })} placeholder="linkedin.com/in/voce" icon={Linkedin} />
+                   <Input label="Site / Portfólio" value={data.personalInfo.website} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, website: v } })} placeholder="seusite.com" icon={Globe} />
+                   <Input label="GitHub" value={data.personalInfo.github} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, github: v } })} placeholder="github.com/voce" icon={FileJson} />
+                   <Input label="Twitter / X" value={data.personalInfo.twitter} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, twitter: v } })} placeholder="x.com/voce" icon={Twitter} />
+                   <Input label="Behance" value={data.personalInfo.behance} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, behance: v } })} placeholder="behance.net/voce" icon={Hash} />
                 </div>
                 <div className="mt-5">
                   <div className="flex justify-between items-center mb-1.5">
                     <label className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider ml-1">Resumo Profissional</label>
                     <div className="flex items-center gap-3">
                         <span className={`text-[10px] font-mono ${data.personalInfo.summary.length > 400 ? 'text-red-500' : 'text-slate-400'}`}>{data.personalInfo.summary.length} chars</span>
-                        <button onClick={handleAIGenerateSummary} disabled={!!loadingAI} className="text-xs text-trampo-600 dark:text-trampo-400 font-medium flex items-center gap-1 hover:underline"><Sparkles size={12}/> Gerar com IA</button>
+                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
+                            <select value={data.settings.aiTone} onChange={(e) => updateSettings('aiTone', e.target.value)} className="text-[10px] bg-transparent border-none outline-none text-slate-600 dark:text-slate-300">
+                                <option value="professional">Profissional</option>
+                                <option value="creative">Criativo</option>
+                                <option value="academic">Acadêmico</option>
+                                <option value="enthusiastic">Entusiasta</option>
+                            </select>
+                            <button onClick={handleAIGenerateSummary} disabled={!!loadingAI} className="text-xs px-2 py-1 bg-white dark:bg-slate-700 rounded text-trampo-600 dark:text-trampo-400 font-medium hover:shadow-sm"><Sparkles size={12}/></button>
+                        </div>
                     </div>
                   </div>
                   <div className="relative group">
                     <AutoResizeTextarea 
+                        id="summary-input"
                         className="w-full p-3 border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-trampo-500/20 focus:border-trampo-500 outline-none transition-all" 
                         value={data.personalInfo.summary} 
                         onChange={(e: any) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, summary: e.target.value } })}
@@ -654,6 +752,7 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
                              <Input label="Subtítulo" value={item.subtitle} onChange={(v: string) => { const secs = [...data.customSections]; secs[sIndex].items[iIndex].subtitle = v; handleChangeWithHistory({...data, customSections: secs}); }} />
                            </div>
                            <AutoResizeTextarea 
+                             id={`custom-${sIndex}-${iIndex}`}
                              value={item.description} 
                              onChange={(e: any) => { const secs = [...data.customSections]; secs[sIndex].items[iIndex].description = e.target.value; handleChangeWithHistory({...data, customSections: secs}); }} 
                              className="w-full text-sm p-2 border border-slate-200 dark:border-slate-700 rounded-lg dark:bg-slate-800 dark:text-slate-200 outline-none focus:border-trampo-500" 
@@ -688,10 +787,11 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
                <div className="space-y-5">
                  
                  {/* Escalas */}
-                 <div className="grid grid-cols-3 gap-3">
+                 <div className="grid grid-cols-2 gap-3">
                     <Input label="Tam. Fonte" value={data.settings.fontScale} onChange={(v: string) => updateSettings('fontScale', v)} type="number" step="0.05" />
-                    <Input label="Espaçamento" value={data.settings.spacingScale} onChange={(v: string) => updateSettings('spacingScale', v)} type="number" step="0.1" />
                     <Input label="Margem" value={data.settings.marginScale} onChange={(v: string) => updateSettings('marginScale', v)} type="number" step="0.1" />
+                    <Input label="Espaçamento" value={data.settings.spacingScale} onChange={(v: string) => updateSettings('spacingScale', v)} type="number" step="0.1" />
+                    <Input label="Alt. Linha" value={data.settings.lineHeight} onChange={(v: string) => updateSettings('lineHeight', v)} type="number" step="0.1" />
                  </div>
                  
                  {/* Font Pairings */}
@@ -750,20 +850,28 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
                       <select className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-200 focus:ring-2 focus:ring-trampo-500/20 outline-none" value={data.settings.skillStyle} onChange={(e) => updateSettings('skillStyle', e.target.value)}>
                         <option value="tags">Tags (Etiquetas)</option>
                         <option value="bar">Barra de Progresso</option>
-                        <option value="dots">Pontos / Bolinhas</option>
+                        <option value="dots">Pontos</option>
+                        <option value="circles">Círculos</option>
                         <option value="hidden">Apenas Texto</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Cor Principal</label>
-                      <div className="flex gap-2 items-center">
-                         <input type="color" value={data.settings.primaryColor || '#000000'} onChange={(e) => updateSettings('primaryColor', e.target.value)} className="w-full h-10 rounded-lg cursor-pointer border-2 border-slate-200 dark:border-slate-600 p-0.5 bg-white dark:bg-slate-800"/>
-                      </div>
+                        <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Alinhamento</label>
+                        <div className="flex gap-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-1">
+                            {['left', 'center', 'right'].map((align: any) => (
+                                <button key={align} onClick={() => updateSettings('headerAlignment', align)} className={`flex-1 p-1.5 rounded flex justify-center ${data.settings.headerAlignment === align ? 'bg-white dark:bg-slate-700 shadow-sm text-trampo-600' : 'text-slate-400 hover:text-slate-600'}`}>
+                                    <div className={`w-3 h-2 bg-current opacity-50 ${align === 'center' ? 'mx-auto' : align === 'right' ? 'ml-auto' : ''} rounded-sm`}></div>
+                                </button>
+                            ))}
+                        </div>
                     </div>
                  </div>
                  
-                 {/* Quick Palette */}
                  <div>
+                    <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Cor Principal</label>
+                    <div className="flex gap-2 items-center mb-2">
+                        <input type="color" value={data.settings.primaryColor || '#000000'} onChange={(e) => updateSettings('primaryColor', e.target.value)} className="w-full h-10 rounded-lg cursor-pointer border-2 border-slate-200 dark:border-slate-600 p-0.5 bg-white dark:bg-slate-800"/>
+                    </div>
                     <div className="flex flex-wrap gap-2.5">
                        {COLOR_PRESETS.map(c => (
                          <button 
@@ -777,10 +885,22 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast }) =
                     </div>
                  </div>
 
+                 <div className="grid grid-cols-2 gap-3 pt-2">
+                    <div>
+                        <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Formato Foto</label>
+                        <select className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-200 outline-none" value={data.settings.photoShape} onChange={(e) => updateSettings('photoShape', e.target.value)}>
+                            <option value="square">Quadrado</option>
+                            <option value="rounded">Arredondado</option>
+                            <option value="circle">Círculo</option>
+                        </select>
+                    </div>
+                 </div>
+
                  <div className="flex flex-wrap gap-4 pt-3 border-t border-slate-100 dark:border-slate-800">
                    <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer select-none"><input type="checkbox" className="rounded text-trampo-600 focus:ring-trampo-500" checked={data.settings.showQrCode} onChange={(e) => updateSettings('showQrCode', e.target.checked)} /> QR Code LinkedIn</label>
                    <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer select-none"><input type="checkbox" className="rounded text-trampo-600 focus:ring-trampo-500" checked={data.settings.compactMode} onChange={(e) => updateSettings('compactMode', e.target.checked)} /> Modo Compacto</label>
                    <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer select-none"><input type="checkbox" className="rounded text-trampo-600 focus:ring-trampo-500" checked={data.settings.showDuration} onChange={(e) => updateSettings('showDuration', e.target.checked)} /> Mostrar Duração</label>
+                   <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer select-none"><input type="checkbox" className="rounded text-trampo-600 focus:ring-trampo-500" checked={data.settings.grayscale} onChange={(e) => updateSettings('grayscale', e.target.checked)} /> Modo P&B</label>
                  </div>
                  
                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800">

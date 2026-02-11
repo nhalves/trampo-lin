@@ -72,7 +72,7 @@ export interface CustomSectionItem {
 export interface CustomSection {
   id: string;
   name: string;
-  icon?: string; // Novo: Ícone personalizado
+  icon?: string;
   items: CustomSectionItem[];
 }
 
@@ -86,6 +86,7 @@ export interface ResumeSettings {
   fontScale: number;
   spacingScale: number;
   marginScale: number;
+  lineHeight: number; // Novo: Altura da linha
   primaryColor?: string;
   sectionOrder: string[];
   visibleSections: Record<string, boolean>;
@@ -93,11 +94,16 @@ export interface ResumeSettings {
   dateFormat: 'MM/yyyy' | 'MMM yyyy' | 'yyyy' | 'full';
   headerFont: string;
   bodyFont: string;
-  headerStyle: 'simple' | 'underline' | 'box' | 'left-bar' | 'gradient'; // Novo: Gradient
-  skillStyle: 'tags' | 'bar' | 'dots' | 'hidden';
+  headerStyle: 'simple' | 'underline' | 'box' | 'left-bar' | 'gradient';
+  headerAlignment: 'left' | 'center' | 'right'; // Novo
+  photoShape: 'square' | 'rounded' | 'circle'; // Novo
+  skillStyle: 'tags' | 'bar' | 'dots' | 'circles' | 'hidden'; // Novo: Circles
   showQrCode: boolean;
   compactMode: boolean;
   showDuration: boolean;
+  grayscale: boolean; // Novo
+  privacyMode: boolean; // Novo: Borrar dados sensíveis
+  aiTone: 'professional' | 'creative' | 'academic' | 'enthusiastic'; // Novo
 }
 
 export interface CoverLetterData {
@@ -119,8 +125,8 @@ export interface ResumeData {
     website: string;
     linkedin: string;
     github: string;
-    twitter: string;
-    behance: string;
+    twitter: string; // Novo
+    behance: string; // Novo
     dribbble: string;
     medium: string;
     photoUrl: string;
@@ -169,7 +175,7 @@ export interface ThemeConfig {
     header?: string;
     body?: string;
   };
-  gradient?: string; // Novo
+  gradient?: string;
 }
 
 export interface AtsAnalysis {

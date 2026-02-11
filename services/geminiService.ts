@@ -15,13 +15,25 @@ const cleanJSON = (text: string): string => {
   return text.replace(/```json\n?|```/g, '').trim();
 };
 
-export const improveText = async (text: string, context: string = 'resume'): Promise<string> => {
+export const improveText = async (text: string, context: string = 'resume', tone: string = 'professional'): Promise<string> => {
   const ai = getAI();
   if (!ai) return text;
 
   try {
+    const tonePrompts: Record<string, string> = {
+        professional: "formal, direto, orientado a resultados e corporativo.",
+        creative: "envolvente, original, com vocabulário inspirador e dinâmico.",
+        academic: "erudito, estruturado, detalhado e focado em precisão técnica.",
+        enthusiastic: "energético, apaixonado, confiante e motivador."
+    };
+
+    const selectedTone = tonePrompts[tone] || tonePrompts['professional'];
+
     const prompt = `Você é um especialista em currículos e RH. Reescreva o texto abaixo (seção: "${context}").
-    Objetivo: Tornar mais profissional, usar verbos de ação e focar em resultados quantificáveis. 
+    
+    ESTILO DESEJADO: ${selectedTone}
+    
+    Objetivo: Tornar mais impactante, usar verbos de ação e focar em resultados. 
     Idioma: Português do Brasil.
     Manter o tamanho aproximado, sem inventar fatos.
     
