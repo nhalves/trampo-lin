@@ -1,10 +1,10 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { AIConfig } from "../types";
+import { AIConfig, ResumeData, TailoredContent, GapAnalysis } from "../types";
 
 // Configuração Padrão
 const DEFAULT_GEMINI_MODEL = 'gemini-3-flash-preview';
-const DEFAULT_OPENROUTER_MODEL = 'google/gemini-2.0-flash-001'; // Free tier usually available or cheap
+const DEFAULT_OPENROUTER_MODEL = 'google/gemini-2.0-flash-001'; 
 
 export const getAIConfig = (): AIConfig => {
   const saved = localStorage.getItem('trampolin_ai_config');
@@ -36,7 +36,7 @@ const callLLM = async (prompt: string | any[], systemInstruction?: string, jsonM
                 headers: {
                     "Authorization": `Bearer ${config.apiKey}`,
                     "Content-Type": "application/json",
-                    "HTTP-Referer": window.location.origin, // Required by OpenRouter
+                    "HTTP-Referer": window.location.origin, 
                     "X-Title": "Trampo-lin Resume Builder",
                 },
                 body: JSON.stringify({
@@ -64,18 +64,13 @@ const callLLM = async (prompt: string | any[], systemInstruction?: string, jsonM
 
     // 2. GEMINI HANDLER (DEFAULT)
     else {
-        // Use process.env.API_KEY exclusively for Gemini as per guidelines
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const modelName = config.model || DEFAULT_GEMINI_MODEL;
 
-        // Gemini SDK expects string or array of parts
         let contents: any = prompt;
         if (typeof prompt === 'string') {
             contents = prompt;
         } else {
-            // Converts OpenRouter/OpenAI multimodal format to Gemini if passed as array
-            // This basic conversion handles text and simple matches, but usually Gemini logic is handled separately in analyzeJobMatch
-            // For simple string prompts passed as array:
              contents = { parts: prompt.map((p: any) => p.text ? { text: p.text } : { text: JSON.stringify(p) }) };
         }
 
@@ -96,11 +91,9 @@ const callLLM = async (prompt: string | any[], systemInstruction?: string, jsonM
     }
 };
 
-// Helper: Limpa blocos de markdown do JSON (```json ... ```)
 const cleanJSON = (text: string): string => {
   if (!text) return "{}";
   const cleaned = text.replace(/```json\n?|```/g, '').trim();
-  // Às vezes modelos OpenRouter retornam texto antes do JSON, tentamos extrair o objeto
   const firstBrace = cleaned.indexOf('{');
   const lastBrace = cleaned.lastIndexOf('}');
   if (firstBrace >= 0 && lastBrace > firstBrace) {
@@ -228,17 +221,50 @@ export const generateLinkedinHeadline = async (resumeData: any): Promise<string>
     } catch (e) { return "Erro ao gerar headline."; }
 };
 
+// --- NEW FEATURES ---
 
-// Nota: analyzeJobMatch e extractResumeFromPdf dependem de multimodalidade (ler PDF/Imagens).
-// O OpenRouter suporta multimodalidade em alguns modelos (GPT-4o, Claude 3.5 Sonnet, Gemini 1.5 Pro).
-// Para simplificar, vamos manter a lógica de texto para ambos, ou adaptar se o modelo suportar.
-// A implementação abaixo assume que estamos enviando TEXTO para o OpenRouter (convertendo o PDF antes ou enviando JSON).
-// Se for PDF (base64) no Gemini, mantemos a lógica específica do Gemini SDK se o provider for Gemini.
+export const tailorResume = async (data: ResumeData, jobDescription: string): Promise<TailoredContent | null> => {
+    try {
+        const system = `Você é um especialista em ATS e carreira. Sua missão é reescrever o Resumo e as Experiências do candidato para dar "Match" com a descrição da vaga fornecida.
+        
+        REGRAS:
+        1. NÃO minta sobre skills que o candidato não tem.
+        2. Use palavras-chave da vaga para refrasear as experiências existentes.
+        3. Destaque resultados que conectam com a vaga.
+        4. O Resumo deve ser direto e usar a nomenclatura da vaga.
+        5. Retorne APENAS JSON no formato: { "summary": "novo resumo...", "experience": [{ "id": "id_da_experiencia_original", "rewrittenDescription": "nova descrição..." }] }
+        `;
+
+        const prompt = `MEU CURRÍCULO:\nResumo: ${data.personalInfo.summary}\nExperiências: ${JSON.stringify(data.experience.map(e => ({id: e.id, role: e.role, company: e.company, desc: e.description})))}\n\nDESCRIÇÃO DA VAGA:\n${jobDescription}`;
+
+        const response = await callLLM(prompt, system, true);
+        return JSON.parse(cleanJSON(response));
+    } catch (e) {
+        console.error("Tailor Error", e);
+        return null;
+    }
+};
+
+export const analyzeGap = async (data: ResumeData, jobDescription: string): Promise<GapAnalysis | null> => {
+    try {
+        const system = `Analise o currículo do candidato em relação à vaga e identifique GAPS (lacunas).
+        Retorne APENAS JSON: { "missingHardSkills": ["..."], "missingSoftSkills": ["..."], "improvements": ["dica 1", "dica 2"] }
+        Seja rigoroso mas construtivo.`;
+
+        const prompt = `MEU PERFIL: ${data.personalInfo.jobTitle}. Skills: ${data.skills.map(s => s.name).join(', ')}. Resumo: ${data.personalInfo.summary}.\n\nVAGA ALVO:\n${jobDescription}`;
+        
+        const response = await callLLM(prompt, system, true);
+        return JSON.parse(cleanJSON(response));
+    } catch (e) {
+        return null;
+    }
+};
+
+// --- MULTIMODAL ---
 
 export const analyzeJobMatch = async (resumeInput: string | { mimeType: string, data: string }, jobDescription: string): Promise<any> => {
   const config = getAIConfig();
   
-  // Se for Gemini e tivermos arquivo binário, usamos o SDK nativo que lida melhor com Files
   if (config.provider === 'gemini' && typeof resumeInput !== 'string') {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       
@@ -263,13 +289,11 @@ export const analyzeJobMatch = async (resumeInput: string | { mimeType: string, 
   if (typeof resumeInput === 'string') {
       resumeTextContent = resumeInput;
   } else {
-      // Tentar enviar como multimodal para OpenRouter
-      const system = `Aja como um sistema ATS (Applicant Tracking System).
-      Compare o currículo (anexo ou texto) com a vaga fornecida.
-      Retorne APENAS JSON: { "score": (número 0-100), "feedback": ["..."], "missingKeywords": ["..."] }`;
+      const system = `Aja como um sistema ATS. Compare o currículo (anexo) com a vaga.
+      Retorne APENAS JSON: { "score": (0-100), "feedback": ["..."], "missingKeywords": ["..."] }`;
 
       const prompt = [
-          { type: "text", text: `MEU CURRÍCULO (Veja o anexo da imagem/PDF)\n\nDESCRIÇÃO DA VAGA:\n${jobDescription.substring(0, 5000)}` },
+          { type: "text", text: `VAGA:\n${jobDescription.substring(0, 5000)}` },
           {
               type: "image_url",
               image_url: {
@@ -279,20 +303,18 @@ export const analyzeJobMatch = async (resumeInput: string | { mimeType: string, 
       ];
 
       try {
-          // Passamos true para jsonMode
           const response = await callLLM(prompt, system, true);
           return JSON.parse(cleanJSON(response));
       } catch (error) {
-          return { score: 0, feedback: ["Erro: O modelo selecionado no OpenRouter pode não suportar leitura de PDF/Imagens (Vision). Tente usar um modelo como 'google/gemini-pro-1.5' ou 'anthropic/claude-3.5-sonnet' no OpenRouter, ou use a chave direta do Gemini."], missingKeywords: [] };
+          return { score: 0, feedback: ["Erro de visão computacional. Tente copiar o texto."], missingKeywords: [] };
       }
   }
 
   try {
-      const system = `Aja como um sistema ATS (Applicant Tracking System).
-      Compare o currículo com a vaga.
-      Retorne APENAS JSON: { "score": (número 0-100), "feedback": ["..."], "missingKeywords": ["..."] }`;
+      const system = `Aja como um sistema ATS. Compare o currículo com a vaga.
+      Retorne APENAS JSON: { "score": (0-100), "feedback": ["..."], "missingKeywords": ["..."] }`;
       
-      const prompt = `MEU CURRÍCULO:\n${resumeTextContent.substring(0, 20000)}\n\nVAGA:\n${jobDescription.substring(0, 5000)}`;
+      const prompt = `CURRÍCULO:\n${resumeTextContent.substring(0, 20000)}\n\nVAGA:\n${jobDescription.substring(0, 5000)}`;
       
       const response = await callLLM(prompt, system, true);
       return JSON.parse(cleanJSON(response));
@@ -304,9 +326,8 @@ export const analyzeJobMatch = async (resumeInput: string | { mimeType: string, 
 export const extractResumeFromPdf = async (fileData: { mimeType: string, data: string }): Promise<any> => {
     const config = getAIConfig();
 
-    // Apenas Gemini suporta PDF nativo no SDK de forma fácil nesta implementação
     if (config.provider !== 'gemini') {
-        alert("A extração de PDF requer o provedor Google Gemini nativo para melhor precisão.");
+        alert("A extração de PDF requer o provedor Google Gemini nativo.");
         return null;
     }
 

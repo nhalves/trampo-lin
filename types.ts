@@ -208,3 +208,17 @@ export interface AtsAnalysis {
   feedback: string[];
   missingKeywords: string[];
 }
+
+export interface GapAnalysis {
+  missingHardSkills: string[];
+  missingSoftSkills: string[];
+  improvements: string[];
+}
+
+export interface TailoredContent {
+  summary: string;
+  experience: {
+    id: string; // ID da experiência original para match
+    rewrittenDescription: string;
+  }[];
+}

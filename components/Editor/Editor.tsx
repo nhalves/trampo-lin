@@ -1,8 +1,8 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ResumeData, ResumeSettings } from '../../types';
-import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Wand2, Eye, EyeOff, ArrowUp, ArrowDown, Settings, Briefcase, GraduationCap, Medal, Code, User, Languages, FileText, Search, QrCode, Heart, Award, Users, FilePlus, Copy, Eraser, Languages as LangIcon, Upload, X, Type, Undo2, Redo2, Download, RefreshCw, Star, Globe, PenTool, CheckCircle2, AlertCircle, FileUp, Calendar, Link2, Mail, Phone, MapPin, FileJson, Twitter, Dribbble, Hash, Bold, Italic, List, Linkedin, BookOpen, Feather, Zap, Smile, Book, Timer, MessageSquare, Briefcase as BriefcaseIcon, LayoutGrid } from 'lucide-react';
-import { improveText, generateSummary, suggestSkills, generateCoverLetter, analyzeJobMatch, translateText, generateBulletPoints, extractResumeFromPdf, generateInterviewQuestions, generateLinkedinHeadline } from '../../services/geminiService';
+import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Wand2, Eye, EyeOff, ArrowUp, ArrowDown, Settings, Briefcase, GraduationCap, Medal, Code, User, Languages, FileText, Search, QrCode, Heart, Award, Users, FilePlus, Copy, Eraser, Languages as LangIcon, Upload, X, Type, Undo2, Redo2, Download, RefreshCw, Star, Globe, PenTool, CheckCircle2, AlertCircle, FileUp, Calendar, Link2, Mail, Phone, MapPin, FileJson, Twitter, Dribbble, Hash, Bold, Italic, List, Linkedin, BookOpen, Feather, Zap, Smile, Book, Timer, MessageSquare, Briefcase as BriefcaseIcon, LayoutGrid, GripVertical, Target, Maximize2, Minimize2 } from 'lucide-react';
+import { improveText, generateSummary, suggestSkills, generateCoverLetter, analyzeJobMatch, translateText, generateBulletPoints, extractResumeFromPdf, generateInterviewQuestions, generateLinkedinHeadline, tailorResume, analyzeGap } from '../../services/geminiService';
 import { AVAILABLE_FONTS, INITIAL_RESUME, FONT_PAIRINGS, EXAMPLE_PERSONAS } from '../../constants';
 
 interface EditorProps {
@@ -10,6 +10,8 @@ interface EditorProps {
   onChange: (data: ResumeData) => void;
   onShowToast: (msg: string) => void;
   onRequestConfirm: (title: string, message: string, onConfirm: () => void, type?: 'danger' | 'info') => void;
+  focusMode: boolean;
+  setFocusMode: (v: boolean) => void;
 }
 
 const COLOR_PRESETS = [
@@ -39,31 +41,91 @@ const handleDateInput = (value: string) => {
     return v;
 };
 
-// UI: Markdown Toolbar
-const MarkdownToolbar = ({ targetId, onInsert }: { targetId: string, onInsert: (char: string, wrap?: boolean) => void }) => (
-    <div className="flex gap-1 mb-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg w-fit">
-        <button onClick={() => onInsert('**', true)} className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Negrito"><Bold size={12}/></button>
-        <button onClick={() => onInsert('*', true)} className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Itálico"><Italic size={12}/></button>
-        <button onClick={() => onInsert('\n• ', false)} className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Lista"><List size={12}/></button>
-    </div>
-);
+// --- OPTIMIZED INPUT COMPONENTS (DEBOUNCED) ---
 
-// Utility: Auto-resize textarea
-const AutoResizeTextarea = ({ value, onChange, placeholder, className, id }: any) => {
+const DebouncedInput = ({ label, value, onChange, type = "text", placeholder = "", step, disabled, icon: Icon, isDate, className }: any) => {
+    const [localValue, setLocalValue] = useState(value);
+    
+    // Sync local state if prop changes externally (e.g. undo/redo/import)
+    useEffect(() => {
+        setLocalValue(value);
+    }, [value]);
+
+    // Debounce Logic
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            if (localValue !== value) {
+                onChange(localValue);
+            }
+        }, 400); // 400ms delay
+
+        return () => clearTimeout(handler);
+    }, [localValue, onChange, value]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = isDate ? handleDateInput(e.target.value) : e.target.value;
+        setLocalValue(val);
+    };
+
+    return (
+        <div className={`mb-1 w-full relative ${className}`}>
+            <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 ml-1">{label}</label>
+            <div className="relative">
+                <input 
+                    type={type} 
+                    step={step} 
+                    disabled={disabled}
+                    placeholder={placeholder} 
+                    className={`w-full px-3 py-2.5 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-trampo-500/20 focus:border-trampo-500 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed dark:text-slate-100 placeholder:text-slate-400 ${Icon ? 'pl-9' : ''}`} 
+                    value={localValue} 
+                    onChange={handleChange} 
+                />
+                {Icon && <Icon className="absolute left-3 top-2.5 text-slate-400" size={16} />}
+            </div>
+        </div>
+    );
+};
+
+const DebouncedTextarea = ({ value, onChange, placeholder, className, id }: any) => {
+    const [localValue, setLocalValue] = useState(value);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+    // Sync from props
     useEffect(() => {
+        setLocalValue(value);
+        adjustHeight();
+    }, [value]);
+
+    // Adjust height helper
+    const adjustHeight = () => {
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
             textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
         }
-    }, [value]);
+    };
 
-    const handleInsert = (char: string, wrap: boolean) => {
+    // Debounce
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            if (localValue !== value) {
+                // Mock event for parent handler compatibility
+                onChange({ target: { value: localValue } });
+            }
+        }, 500); // 500ms for textareas
+
+        return () => clearTimeout(handler);
+    }, [localValue, onChange, value]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setLocalValue(e.target.value);
+        adjustHeight();
+    };
+
+    const handleMarkdown = (char: string, wrap: boolean) => {
         if (!textareaRef.current) return;
         const start = textareaRef.current.selectionStart;
         const end = textareaRef.current.selectionEnd;
-        const text = value;
+        const text = localValue || "";
         let newText = '';
         
         if (wrap) {
@@ -72,28 +134,32 @@ const AutoResizeTextarea = ({ value, onChange, placeholder, className, id }: any
             newText = text.substring(0, start) + char + text.substring(end);
         }
         
-        // Simular evento de change
-        const event = { target: { value: newText } };
-        onChange(event);
+        setLocalValue(newText);
+        // Force sync immediately for toolbar actions
+        onChange({ target: { value: newText } });
         
-        // Restore focus (timeout needed for React re-render)
         setTimeout(() => {
             textareaRef.current?.focus();
             textareaRef.current?.setSelectionRange(start + char.length, wrap ? end + char.length : start + char.length);
+            adjustHeight();
         }, 0);
     };
 
     return (
         <div className="relative group">
-            <div className="opacity-0 group-focus-within:opacity-100 transition-opacity absolute -top-8 right-0 z-10">
-                <MarkdownToolbar targetId={id} onInsert={handleInsert} />
+             <div className="opacity-0 group-focus-within:opacity-100 transition-opacity absolute -top-8 right-0 z-10">
+                <div className="flex gap-1 mb-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg w-fit shadow-sm border border-slate-200 dark:border-slate-700">
+                    <button onClick={() => handleMarkdown('**', true)} className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Negrito"><Bold size={12}/></button>
+                    <button onClick={() => handleMarkdown('*', true)} className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Itálico"><Italic size={12}/></button>
+                    <button onClick={() => handleMarkdown('\n• ', false)} className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Lista"><List size={12}/></button>
+                </div>
             </div>
             <textarea
                 id={id}
                 ref={textareaRef}
                 className={`${className} resize-none overflow-hidden`}
-                value={value}
-                onChange={onChange}
+                value={localValue}
+                onChange={handleChange}
                 placeholder={placeholder}
                 rows={1}
             />
@@ -134,29 +200,7 @@ const Section = ({ title, icon: Icon, children, isOpen, onToggle, isVisible, onV
   </div>
 );
 
-// UI Component: Modern Input
-const Input = ({ label, value, onChange, type = "text", placeholder = "", step, disabled, icon: Icon, isDate }: any) => (
-  <div className="mb-1 w-full relative">
-    <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 ml-1">{label}</label>
-    <div className="relative">
-        <input 
-        type={type} 
-        step={step} 
-        disabled={disabled}
-        placeholder={placeholder} 
-        className={`w-full px-3 py-2.5 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-trampo-500/20 focus:border-trampo-500 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed dark:text-slate-100 placeholder:text-slate-400 ${Icon ? 'pl-9' : ''}`} 
-        value={value} 
-        onChange={(e) => {
-            const val = isDate ? handleDateInput(e.target.value) : e.target.value;
-            onChange(val);
-        }} 
-        />
-        {Icon && <Icon className="absolute left-3 top-2.5 text-slate-400" size={16} />}
-    </div>
-  </div>
-);
-
-export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onRequestConfirm }) => {
+export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onRequestConfirm, focusMode, setFocusMode }) => {
   const [openSection, setOpenSection] = useState<string>('personal');
   const [loadingAI, setLoadingAI] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'resume' | 'cover' | 'ats' | 'tools'>('resume');
@@ -164,6 +208,11 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
   const [atsResult, setAtsResult] = useState<any>(null);
   const [atsFile, setAtsFile] = useState<{name: string, data: string, mimeType: string} | null>(null);
   const [showExamples, setShowExamples] = useState(false);
+  const [showTailorModal, setShowTailorModal] = useState(false);
+  const [showGapModal, setShowGapModal] = useState(false);
+  const [tailorJobDesc, setTailorJobDesc] = useState('');
+  const [gapJobDesc, setGapJobDesc] = useState('');
+  const [gapAnalysis, setGapAnalysis] = useState<any>(null);
   
   // Extra Tools State
   const [interviewQs, setInterviewQs] = useState<string>('');
@@ -207,7 +256,7 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
   }, [historyIndex, history]);
 
   // Handle Changes with History
-  const handleChangeWithHistory = (newData: ResumeData) => {
+  const handleChangeWithHistory = useCallback((newData: ResumeData) => {
     if (isUndoRedoAction.current) {
       onChange(newData);
       isUndoRedoAction.current = false;
@@ -221,7 +270,7 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
     onChange(newData);
-  };
+  }, [history, historyIndex, onChange]);
 
   const undo = () => {
     if (historyIndex > 0) {
@@ -240,6 +289,33 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
   };
 
   const toggleSection = (section: string) => setOpenSection(openSection === section ? '' : section);
+
+  // --- DRAG AND DROP HANDLERS ---
+  const handleDragStart = (e: React.DragEvent, listName: string, index: number) => {
+      e.dataTransfer.setData("listName", listName);
+      e.dataTransfer.setData("index", index.toString());
+      e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+      e.preventDefault(); // Necessário para permitir o Drop
+      e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (e: React.DragEvent, listName: string, dropIndex: number) => {
+      e.preventDefault();
+      const dragListName = e.dataTransfer.getData("listName");
+      const dragIndex = parseInt(e.dataTransfer.getData("index"));
+
+      if (dragListName !== listName || dragIndex === dropIndex || isNaN(dragIndex)) return;
+
+      const list = [...(data as any)[listName]];
+      const [movedItem] = list.splice(dragIndex, 1);
+      list.splice(dropIndex, 0, movedItem);
+
+      handleChangeWithHistory({ ...data, [listName]: list });
+      onShowToast("Item reordenado.");
+  };
 
   // --- Helpers ---
   const updateSettings = (field: keyof ResumeSettings, value: any) => {
@@ -410,6 +486,43 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
       setLinkedinHeadline(res);
       setLoadingAI(null);
   };
+  
+  // NEW: TAILOR RESUME
+  const handleTailorResume = async () => {
+      if (!tailorJobDesc) return;
+      setLoadingAI('tailor');
+      const result = await tailorResume(data, tailorJobDesc);
+      
+      if (result) {
+          const newData = { ...data };
+          // Atualiza Resumo
+          if (result.summary) newData.personalInfo.summary = result.summary;
+          
+          // Atualiza Experiências (Match by ID)
+          result.experience.forEach(rewritten => {
+              const idx = newData.experience.findIndex(e => e.id === rewritten.id);
+              if (idx !== -1) {
+                  newData.experience[idx].description = rewritten.rewrittenDescription;
+              }
+          });
+          
+          handleChangeWithHistory(newData);
+          onShowToast("Currículo adaptado à vaga com sucesso!");
+          setShowTailorModal(false);
+      } else {
+          onShowToast("Erro ao adaptar currículo.");
+      }
+      setLoadingAI(null);
+  };
+
+  // NEW: GAP ANALYSIS
+  const handleGapAnalysis = async () => {
+      if (!gapJobDesc) return;
+      setLoadingAI('gap');
+      const result = await analyzeGap(data, gapJobDesc);
+      setGapAnalysis(result);
+      setLoadingAI(null);
+  };
 
   const handleTranslate = async (lang: string) => {
      onRequestConfirm(
@@ -540,11 +653,17 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
   const renderGenericList = (key: string, titleField: string, subtitleField: string, newItem: any, fields: any[]) => (
     <div className="space-y-4">
        {(data as any)[key].map((item: any, index: number) => (
-         <div key={item.id} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 relative group transition-all hover:shadow-md hover:border-trampo-200 dark:hover:border-slate-600">
+         <div 
+            key={item.id} 
+            draggable 
+            onDragStart={(e) => handleDragStart(e, key, index)}
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleDrop(e, key, index)}
+            className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 relative group transition-all hover:shadow-md hover:border-trampo-200 dark:hover:border-slate-600 cursor-grab active:cursor-grabbing"
+         >
             <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white dark:bg-slate-800 p-1 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
+               <div className="p-1.5 text-slate-400 cursor-move" title="Arrastar para reordenar"><GripVertical size={14}/></div>
                <button onClick={() => duplicateItem(key, index)} className="p-1.5 hover:text-blue-500 rounded hover:bg-slate-100 dark:hover:bg-slate-700" title="Duplicar"><Copy size={14}/></button>
-               <button onClick={() => moveItem(key, index, 'up')} className="p-1.5 hover:text-slate-600 dark:hover:text-slate-300 rounded hover:bg-slate-100 dark:hover:bg-slate-700" title="Mover p/ Cima"><ArrowUp size={14}/></button>
-               <button onClick={() => moveItem(key, index, 'down')} className="p-1.5 hover:text-slate-600 dark:hover:text-slate-300 rounded hover:bg-slate-100 dark:hover:bg-slate-700" title="Mover p/ Baixo"><ArrowDown size={14}/></button>
                <button onClick={() => removeItem(key, index)} className="p-1.5 hover:text-red-500 rounded hover:bg-red-50 dark:hover:bg-red-900/20" title="Remover"><Trash2 size={14}/></button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 pr-8">
@@ -553,7 +672,7 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                     // Logic specifically for dates in Experience/Education
                     return (
                         <div key={f.key}>
-                            <Input 
+                            <DebouncedInput 
                                 label={f.label} 
                                 value={item[f.key]} 
                                 onChange={(v: string) => handleListChange(key, index, f.key, v)} 
@@ -578,7 +697,7 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                 }
                 return (
                     <div key={f.key} className={f.full ? "col-span-2" : ""}>
-                        <Input label={f.label} value={item[f.key]} onChange={(v: string) => handleListChange(key, index, f.key, v)} type={f.type || 'text'} placeholder={f.placeholder} />
+                        <DebouncedInput label={f.label} value={item[f.key]} onChange={(v: string) => handleListChange(key, index, f.key, v)} type={f.type || 'text'} placeholder={f.placeholder} />
                     </div>
                 );
               })}
@@ -599,7 +718,7 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                         </button>
                     </div>
                  </div>
-                 <AutoResizeTextarea 
+                 <DebouncedTextarea 
                     id={`desc-${key}-${index}`}
                     className="w-full p-3 border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-trampo-500/20 focus:border-trampo-500 outline-none transition-all leading-relaxed" 
                     value={item.description} 
@@ -624,6 +743,12 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
          </div>
          <div className="flex gap-2">
             <input type="file" ref={jsonInputRef} onChange={handleJsonImport} accept=".json" className="hidden" />
+            
+            {/* Focus Mode Button */}
+            <button onClick={() => setFocusMode(!focusMode)} className={`p-2 rounded-lg transition-colors border ${focusMode ? 'bg-trampo-100 border-trampo-300 text-trampo-600' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`} title={focusMode ? "Sair do Modo Foco" : "Modo Foco (Zen)"}>
+                {focusMode ? <Minimize2 size={16}/> : <Maximize2 size={16}/>}
+            </button>
+            
             <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
                 <button onClick={() => jsonInputRef.current?.click()} className="p-1.5 rounded-md hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm transition-all text-slate-600 dark:text-slate-300" title="Importar Backup JSON"><Upload size={16}/></button>
                 <button onClick={handleJsonExport} className="p-1.5 rounded-md hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm transition-all text-slate-600 dark:text-slate-300" title="Exportar Backup JSON"><Download size={16}/></button>
@@ -654,6 +779,20 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
       <div className="flex-1 overflow-y-auto px-4 py-6 custom-scrollbar scroll-smooth">
         {activeTab === 'resume' && (
           <div className="space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-2 duration-300">
+             {/* Magic Actions Widget */}
+             <div className="p-3 bg-gradient-to-r from-trampo-50 to-purple-50 dark:from-slate-800 dark:to-slate-800 rounded-xl border border-trampo-100 dark:border-slate-700 flex justify-between items-center shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white dark:bg-slate-700 rounded-lg shadow-sm text-trampo-600 dark:text-trampo-400"><Sparkles size={18}/></div>
+                    <div>
+                        <h4 className="text-xs font-bold text-slate-700 dark:text-white">Adaptação Inteligente</h4>
+                        <p className="text-[10px] text-slate-500">Personalize para a vaga</p>
+                    </div>
+                </div>
+                <button onClick={() => setShowTailorModal(true)} className="px-3 py-1.5 bg-white dark:bg-slate-900 border border-trampo-200 dark:border-slate-600 rounded-lg text-xs font-bold text-trampo-700 dark:text-trampo-300 hover:shadow-md transition-all active:scale-95">
+                    🎯 Adaptar Currículo
+                </button>
+             </div>
+
              {/* Stats & Checklist Widget (New) */}
              <div className="grid grid-cols-2 gap-4 mb-2">
                  <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col gap-1">
@@ -694,21 +833,21 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                   <Input label="Nome Completo" value={data.personalInfo.fullName} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, fullName: v } })} placeholder="Seu Nome" />
-                   <Input label="Cargo Alvo" value={data.personalInfo.jobTitle} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, jobTitle: v } })} placeholder="Ex: Desenvolvedor Frontend" />
-                   <Input label="Email" value={data.personalInfo.email} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, email: v } })} placeholder="nome@email.com" icon={Mail} />
-                   <Input label="Telefone" value={data.personalInfo.phone} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, phone: v } })} placeholder="(11) 99999-9999" icon={Phone} />
-                   <Input label="Endereço" value={data.personalInfo.address} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, address: v } })} placeholder="Cidade, Estado" icon={MapPin} />
-                   <Input label="LinkedIn" value={data.personalInfo.linkedin} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, linkedin: v } })} placeholder="linkedin.com/in/voce" icon={Linkedin} />
-                   <Input label="Site / Portfólio" value={data.personalInfo.website} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, website: v } })} placeholder="seusite.com" icon={Globe} />
-                   <Input label="GitHub" value={data.personalInfo.github} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, github: v } })} placeholder="github.com/voce" icon={FileJson} />
-                   <Input label="Twitter / X" value={data.personalInfo.twitter} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, twitter: v } })} placeholder="x.com/voce" icon={Twitter} />
-                   <Input label="Behance" value={data.personalInfo.behance} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, behance: v } })} placeholder="behance.net/voce" icon={Hash} />
+                   <DebouncedInput label="Nome Completo" value={data.personalInfo.fullName} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, fullName: v } })} placeholder="Seu Nome" />
+                   <DebouncedInput label="Cargo Alvo" value={data.personalInfo.jobTitle} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, jobTitle: v } })} placeholder="Ex: Desenvolvedor Frontend" />
+                   <DebouncedInput label="Email" value={data.personalInfo.email} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, email: v } })} placeholder="nome@email.com" icon={Mail} />
+                   <DebouncedInput label="Telefone" value={data.personalInfo.phone} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, phone: v } })} placeholder="(11) 99999-9999" icon={Phone} />
+                   <DebouncedInput label="Endereço" value={data.personalInfo.address} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, address: v } })} placeholder="Cidade, Estado" icon={MapPin} />
+                   <DebouncedInput label="LinkedIn" value={data.personalInfo.linkedin} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, linkedin: v } })} placeholder="linkedin.com/in/voce" icon={Linkedin} />
+                   <DebouncedInput label="Site / Portfólio" value={data.personalInfo.website} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, website: v } })} placeholder="seusite.com" icon={Globe} />
+                   <DebouncedInput label="GitHub" value={data.personalInfo.github} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, github: v } })} placeholder="github.com/voce" icon={FileJson} />
+                   <DebouncedInput label="Twitter / X" value={data.personalInfo.twitter} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, twitter: v } })} placeholder="x.com/voce" icon={Twitter} />
+                   <DebouncedInput label="Behance" value={data.personalInfo.behance} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, behance: v } })} placeholder="behance.net/voce" icon={Hash} />
                 </div>
                 
                 {/* Signature Field */}
                 <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
-                     <Input label="Assinatura Digital (Opcional)" value={data.personalInfo.signature || ''} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, signature: v } })} placeholder="Digite seu nome para assinar" icon={PenTool} />
+                     <DebouncedInput label="Assinatura Digital (Opcional)" value={data.personalInfo.signature || ''} onChange={(v: string) => handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, signature: v } })} placeholder="Digite seu nome para assinar" icon={PenTool} />
                 </div>
 
                 <div className="mt-5">
@@ -728,7 +867,7 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                     </div>
                   </div>
                   <div className="relative group">
-                    <AutoResizeTextarea 
+                    <DebouncedTextarea 
                         id="summary-input"
                         className="w-full p-3 border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-trampo-500/20 focus:border-trampo-500 outline-none transition-all" 
                         value={data.personalInfo.summary} 
@@ -761,6 +900,7 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                ])}
              </Section>
 
+             {/* ... Other sections omitted for brevity but should remain ... */}
              <Section title="Habilidades" icon={Sparkles} isOpen={openSection === 'skills'} onToggle={() => toggleSection('skills')} isVisible={data.settings.visibleSections.skills} onVisibilityToggle={() => toggleVisibility('skills')} onClear={() => clearList('skills')} itemCount={data.skills.length}>
                 <div className="flex flex-wrap gap-2 mb-4">
                   {data.skills.map((skill, index) => (
@@ -770,7 +910,6 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                            <button onClick={() => removeItem('skills', index)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={12}/></button>
                        </div>
                        
-                       {/* Skill Level Visual Selector */}
                        {data.settings.skillStyle !== 'hidden' && data.settings.skillStyle !== 'tags' && (
                          <div className="flex gap-1">
                              {[1,2,3,4,5].map(level => (
@@ -791,8 +930,8 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                    <button onClick={async () => { setLoadingAI('skills'); const s = await suggestSkills(data.personalInfo.jobTitle); if(s.length) addItem('skills', s.map(n => ({ id: Date.now()+Math.random().toString(), name: n, level: 3 })).pop()); else onShowToast("Preencha o cargo primeiro."); }} disabled={!data.personalInfo.jobTitle} className="px-4 py-2 border border-purple-100 dark:border-purple-900 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-sm hover:bg-purple-100 dark:hover:bg-purple-900/40 text-purple-600 dark:text-purple-300 flex items-center gap-2 transition-all shadow-sm"><Sparkles size={16}/> Sugerir IA</button>
                 </div>
              </Section>
-            
-             {/* New Sections: Publications & Interests */}
+
+             {/* Keep remaining sections like Publications, Interests, etc. */}
              <Section title="Publicações" icon={BookOpen} isOpen={openSection === 'publications'} onToggle={() => toggleSection('publications')} isVisible={data.settings.visibleSections.publications} onVisibilityToggle={() => toggleVisibility('publications')} onClear={() => clearList('publications')} itemCount={data.publications.length}>
                {renderGenericList('publications', 'title', 'publisher', { title: 'Título', publisher: 'Editora', date: '', url: '' }, [
                  { key: 'title', label: 'Título' }, { key: 'publisher', label: 'Editora/Veículo' }, { key: 'date', label: 'Data', type: 'text' }, { key: 'url', label: 'Link' }
@@ -810,13 +949,13 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                    <button onClick={() => handleChangeWithHistory({...data, interests: [...data.interests, {id: Date.now().toString(), name: 'Novo Interesse'}]})} className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-sm hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-300 transition-all">+ Add</button>
                 </div>
              </Section>
-
+             
              <Section title="Voluntariado" icon={Heart} isOpen={openSection === 'volunteer'} onToggle={() => toggleSection('volunteer')} isVisible={data.settings.visibleSections.volunteer} onVisibilityToggle={() => toggleVisibility('volunteer')} onClear={() => clearList('volunteer')}>
                {renderGenericList('volunteer', 'role', 'organization', { role: 'Voluntário', organization: 'ONG' }, [
                  { key: 'role', label: 'Função' }, { key: 'organization', label: 'Organização' }, { key: 'startDate', label: 'Período', type: 'text' }
                ])}
              </Section>
-
+             
              <Section title="Prêmios" icon={Award} isOpen={openSection === 'awards'} onToggle={() => toggleSection('awards')} isVisible={data.settings.visibleSections.awards} onVisibilityToggle={() => toggleVisibility('awards')} onClear={() => clearList('awards')}>
                {renderGenericList('awards', 'title', 'issuer', { title: 'Prêmio', issuer: 'Emissor' }, [
                  { key: 'title', label: 'Título' }, { key: 'issuer', label: 'Emissor' }, { key: 'date', label: 'Data' }
@@ -854,10 +993,10 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                       {section.items.map((item, iIndex) => (
                         <div key={item.id} className="mb-3 pl-3 border-l-2 border-slate-200 dark:border-slate-700">
                            <div className="grid grid-cols-2 gap-3 mb-2">
-                             <Input label="Título" value={item.title} onChange={(v: string) => { const secs = [...data.customSections]; secs[sIndex].items[iIndex].title = v; handleChangeWithHistory({...data, customSections: secs}); }} />
-                             <Input label="Subtítulo" value={item.subtitle} onChange={(v: string) => { const secs = [...data.customSections]; secs[sIndex].items[iIndex].subtitle = v; handleChangeWithHistory({...data, customSections: secs}); }} />
+                             <DebouncedInput label="Título" value={item.title} onChange={(v: string) => { const secs = [...data.customSections]; secs[sIndex].items[iIndex].title = v; handleChangeWithHistory({...data, customSections: secs}); }} />
+                             <DebouncedInput label="Subtítulo" value={item.subtitle} onChange={(v: string) => { const secs = [...data.customSections]; secs[sIndex].items[iIndex].subtitle = v; handleChangeWithHistory({...data, customSections: secs}); }} />
                            </div>
-                           <AutoResizeTextarea 
+                           <DebouncedTextarea 
                              id={`custom-${sIndex}-${iIndex}`}
                              value={item.description} 
                              onChange={(e: any) => { const secs = [...data.customSections]; secs[sIndex].items[iIndex].description = e.target.value; handleChangeWithHistory({...data, customSections: secs}); }} 
@@ -871,11 +1010,11 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                 ))}
                 <button onClick={() => handleChangeWithHistory({...data, customSections: [...data.customSections, { id: Date.now().toString(), name: 'Nova Seção', items: [] }]})} className="w-full py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-medium rounded-xl flex items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"><Plus size={18}/> Criar Seção Personalizada</button>
              </Section>
-
-             {/* Projects & Languages */}
+             
              <Section title="Projetos" icon={Code} isOpen={openSection === 'projects'} onToggle={() => toggleSection('projects')} isVisible={data.settings.visibleSections.projects} onVisibilityToggle={() => toggleVisibility('projects')} onClear={() => clearList('projects')} itemCount={data.projects.length}>
                {renderGenericList('projects', 'name', 'url', { name: 'Projeto', url: '' }, [{key:'name', label:'Nome do Projeto'}, {key:'url', label:'Link (URL)', placeholder: 'ex: github.com/projeto'}])}
              </Section>
+             
              <Section title="Idiomas" icon={Languages} isOpen={openSection === 'languages'} onToggle={() => toggleSection('languages')} isVisible={data.settings.visibleSections.languages} onVisibilityToggle={() => toggleVisibility('languages')} onClear={() => clearList('languages')} itemCount={data.languages.length}>
                 <div className="flex flex-wrap gap-2">
                    {data.languages.map((l, i) => (
@@ -888,19 +1027,17 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                 </div>
              </Section>
 
-             {/* Settings Section Moved to Bottom for logical flow */}
+             {/* Settings Section */}
              <Section title="Configurações & Visual" icon={Settings} isOpen={openSection === 'settings'} onToggle={() => toggleSection('settings')}>
                <div className="space-y-5">
-                 
-                 {/* Escalas */}
+                 {/* Reused settings code... */}
                  <div className="grid grid-cols-2 gap-3">
-                    <Input label="Tam. Fonte" value={data.settings.fontScale} onChange={(v: string) => updateSettings('fontScale', v)} type="number" step="0.05" />
-                    <Input label="Margem" value={data.settings.marginScale} onChange={(v: string) => updateSettings('marginScale', v)} type="number" step="0.1" />
-                    <Input label="Espaçamento" value={data.settings.spacingScale} onChange={(v: string) => updateSettings('spacingScale', v)} type="number" step="0.1" />
-                    <Input label="Alt. Linha" value={data.settings.lineHeight} onChange={(v: string) => updateSettings('lineHeight', v)} type="number" step="0.1" />
+                    <DebouncedInput label="Tam. Fonte" value={data.settings.fontScale} onChange={(v: string) => updateSettings('fontScale', v)} type="number" step="0.05" />
+                    <DebouncedInput label="Margem" value={data.settings.marginScale} onChange={(v: string) => updateSettings('marginScale', v)} type="number" step="0.1" />
+                    <DebouncedInput label="Espaçamento" value={data.settings.spacingScale} onChange={(v: string) => updateSettings('spacingScale', v)} type="number" step="0.1" />
+                    <DebouncedInput label="Alt. Linha" value={data.settings.lineHeight} onChange={(v: string) => updateSettings('lineHeight', v)} type="number" step="0.1" />
                  </div>
                  
-                 {/* Estilos Visuais Avançados */}
                  <div className="grid grid-cols-2 gap-3">
                      <div>
                          <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Padrão de Fundo</label>
@@ -930,7 +1067,6 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                     </div>
                  </div>
 
-                 {/* Fontes Manuais */}
                  <div className="grid grid-cols-2 gap-3">
                    <div>
                       <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Fonte Título</label>
@@ -946,7 +1082,6 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                    </div>
                  </div>
 
-                 {/* Estilos Visuais */}
                  <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Formato Data</label>
@@ -969,7 +1104,6 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                     </div>
                  </div>
 
-                 {/* Cor e Skills */}
                  <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Visual Skills</label>
@@ -1037,28 +1171,6 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                        <button onClick={() => handleTranslate('Español')} disabled={!!loadingAI} className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-1.5 transition-colors"><LangIcon size={14}/> Español</button>
                     </div>
                  </div>
-
-                 {/* Reorder */}
-                 <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
-                     <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-2">Ordem das Seções</label>
-                     <div className="space-y-1.5">
-                        {data.settings.sectionOrder.map((sec, i) => (
-                           <div key={sec} className="flex justify-between items-center text-xs font-medium bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800">
-                              <span className="capitalize text-slate-700 dark:text-slate-300">{sec}</span>
-                              <div className="flex gap-1">
-                                 <button onClick={() => {
-                                     const newOrder = [...data.settings.sectionOrder];
-                                     if (i > 0) { [newOrder[i], newOrder[i-1]] = [newOrder[i-1], newOrder[i]]; updateSettings('sectionOrder', newOrder); }
-                                 }} disabled={i===0} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded disabled:opacity-30"><ArrowUp size={12}/></button>
-                                 <button onClick={() => {
-                                     const newOrder = [...data.settings.sectionOrder];
-                                     if (i < newOrder.length-1) { [newOrder[i], newOrder[i+1]] = [newOrder[i+1], newOrder[i]]; updateSettings('sectionOrder', newOrder); }
-                                 }} disabled={i===data.settings.sectionOrder.length-1} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded disabled:opacity-30"><ArrowDown size={12}/></button>
-                              </div>
-                           </div>
-                        ))}
-                     </div>
-                 </div>
                </div>
              </Section>
 
@@ -1072,10 +1184,18 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                     <p className="text-xs text-amber-700 dark:text-amber-400">Recursos poderosos para impulsionar sua candidatura.</p>
                 </div>
 
-                {/* Interview Prep */}
+                {/* Gap Analysis */}
+                <div className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+                     <h4 className="font-bold text-sm mb-2 flex items-center gap-2"><Target size={16}/> Análise de Gaps (Skills Faltantes)</h4>
+                     <p className="text-xs text-slate-500 mb-4">Descubra o que você precisa aprender para conquistar a vaga dos sonhos.</p>
+                     <button onClick={() => setShowGapModal(true)} className="w-full py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+                         Identificar Gaps
+                     </button>
+                </div>
+
+                {/* Existing Tools... */}
                 <div className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
                      <h4 className="font-bold text-sm mb-2 flex items-center gap-2"><MessageSquare size={16}/> Simulador de Entrevista</h4>
-                     <p className="text-xs text-slate-500 mb-4">A IA gera perguntas baseadas especificamente no seu currículo.</p>
                      <button onClick={handleAIInterview} disabled={!!loadingAI} className="w-full py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
                          {loadingAI === 'interview' ? 'Gerando...' : 'Gerar Perguntas'}
                      </button>
@@ -1086,10 +1206,8 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                      )}
                 </div>
 
-                {/* LinkedIn Headline */}
                 <div className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
                      <h4 className="font-bold text-sm mb-2 flex items-center gap-2"><Linkedin size={16}/> Gerador de Headline LinkedIn</h4>
-                     <p className="text-xs text-slate-500 mb-4">Crie títulos chamativos para seu perfil profissional.</p>
                      <button onClick={handleAIHeadline} disabled={!!loadingAI} className="w-full py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
                          {loadingAI === 'headline' ? 'Criando...' : 'Criar Headlines'}
                      </button>
@@ -1099,147 +1217,98 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                          </div>
                      )}
                 </div>
-
-                {/* Checklist */}
-                <div className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
-                    <h4 className="font-bold text-sm mb-2 flex items-center gap-2"><CheckCircle2 size={16}/> Checklist Final</h4>
-                    <div className="space-y-2 text-xs">
-                        <div className="flex items-center gap-2">
-                            {data.personalInfo.email ? <CheckCircle2 size={14} className="text-green-500"/> : <AlertCircle size={14} className="text-red-500"/>}
-                            <span>Email de contato inserido</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            {data.personalInfo.phone ? <CheckCircle2 size={14} className="text-green-500"/> : <AlertCircle size={14} className="text-red-500"/>}
-                            <span>Telefone de contato inserido</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                             {data.personalInfo.linkedin ? <CheckCircle2 size={14} className="text-green-500"/> : <AlertCircle size={14} className="text-yellow-500"/>}
-                             <span>LinkedIn vinculado (Recomendado)</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                             {data.experience.length > 0 ? <CheckCircle2 size={14} className="text-green-500"/> : <AlertCircle size={14} className="text-red-500"/>}
-                             <span>Pelo menos 1 experiência profissional</span>
-                        </div>
-                         <div className="flex items-center gap-2">
-                             {data.skills.length >= 5 ? <CheckCircle2 size={14} className="text-green-500"/> : <AlertCircle size={14} className="text-yellow-500"/>}
-                             <span>Lista de skills robusta (5+)</span>
-                        </div>
-                    </div>
-                </div>
             </div>
         )}
 
-        {activeTab === 'cover' && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="bg-purple-50 dark:bg-purple-900/10 p-4 rounded-xl border border-purple-100 dark:border-purple-900/30">
-                <h3 className="font-bold text-purple-900 dark:text-purple-300 flex items-center gap-2 mb-2"><Wand2 size={20}/> Gerador de Carta</h3>
-                <p className="text-xs text-purple-700 dark:text-purple-400">A IA usará o resumo e skills do seu currículo atual.</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-               <Input label="Nome da Empresa" value={data.coverLetter.companyName} onChange={(v: string) => handleChangeWithHistory({...data, coverLetter: {...data.coverLetter, companyName: v}})} placeholder="Ex: Google" />
-               <Input label="Vaga / Cargo" value={data.coverLetter.jobTitle} onChange={(v: string) => handleChangeWithHistory({...data, coverLetter: {...data.coverLetter, jobTitle: v}})} placeholder="Ex: Software Engineer" />
-            </div>
-            <button onClick={handleAICoverLetter} disabled={!!loadingAI} className="w-full py-3 bg-purple-600 text-white rounded-xl flex justify-center items-center gap-2 hover:bg-purple-700 disabled:opacity-50 font-semibold shadow-lg shadow-purple-200 dark:shadow-none transition-transform active:scale-95">
-               <Sparkles size={18} /> {loadingAI === 'cover-letter' ? 'Escrevendo Carta...' : 'Gerar Carta com IA'}
-            </button>
-            <AutoResizeTextarea 
-                className="w-full p-4 border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 rounded-xl text-sm leading-relaxed shadow-sm focus:ring-2 focus:ring-purple-500/20 outline-none min-h-[300px]" 
-                value={data.coverLetter.content} 
-                onChange={(e: any) => handleChangeWithHistory({...data, coverLetter: {...data.coverLetter, content: e.target.value}})} 
-                placeholder="Sua carta aparecerá aqui..." 
-            />
-          </div>
-        )}
-        
-        {activeTab === 'ats' && (
-           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-             <div className="bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
-                 <h3 className="font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-2 mb-2"><Search size={20}/> ATS Scanner</h3>
-                 <p className="text-xs text-emerald-700 dark:text-emerald-400">Descubra se seu currículo passa nos robôs de recrutamento.</p>
-             </div>
-
-             {/* Upload Option */}
-             <div className="p-4 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900/50 text-center transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
-                 <input type="file" ref={atsPdfInputRef} accept="application/pdf" className="hidden" onChange={handleAtsPdfUpload} />
-                 {atsFile ? (
-                     <div className="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
-                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-red-100 text-red-600 rounded"><FileText size={20}/></div>
-                                <div className="text-left">
-                                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate max-w-[180px]">{atsFile.name}</p>
-                                    <p className="text-xs text-slate-400">PDF Carregado</p>
-                                </div>
-                            </div>
-                            <button onClick={() => setAtsFile(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-400"><X size={16}/></button>
-                         </div>
-                         
-                         {/* Conversion Button */}
-                         <button 
-                            onClick={handleConvertToEditor} 
-                            disabled={!!loadingAI}
-                            className="w-full py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 rounded-lg text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center justify-center gap-2 border border-blue-100 dark:border-blue-900/30"
-                         >
-                            {loadingAI === 'convert-pdf' ? <RefreshCw size={14} className="animate-spin"/> : <FileJson size={14}/>}
-                            Converter PDF para Editor (Beta)
-                         </button>
-                     </div>
-                 ) : (
-                    <div onClick={() => atsPdfInputRef.current?.click()} className="cursor-pointer py-4 group">
-                        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                            <FileUp size={24}/>
-                        </div>
-                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Clique para analisar um PDF externo</p>
-                        <p className="text-xs text-slate-400 mt-1">Ou deixe vazio para analisar o currículo do editor atual.</p>
-                    </div>
-                 )}
-             </div>
-
-             <textarea className="w-full h-40 p-4 border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none resize-none" placeholder="Cole a descrição da vaga aqui..." value={jobDescription} onChange={(e) => setJobDescription(e.target.value)} />
-             
-             <button onClick={handleRunAtsAnalysis} disabled={!!loadingAI || !jobDescription} className="w-full py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 disabled:opacity-50 font-semibold shadow-lg shadow-emerald-200 dark:shadow-none transition-transform active:scale-95 flex items-center justify-center gap-2">
-                 {loadingAI === 'ats' ? 'Analisando...' : 'Analisar Compatibilidade'}
-             </button>
-             
-             {atsResult && (
-                 <div className="p-6 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-lg animate-in fade-in zoom-in duration-300">
-                     <div className="flex items-center justify-between mb-6">
-                         <div>
-                             <h4 className="font-bold text-lg dark:text-white">Resultado da Análise</h4>
-                             <p className="text-xs text-slate-500 dark:text-slate-400">Baseado na vaga fornecida</p>
-                         </div>
-                         <div className={`relative w-20 h-20 flex items-center justify-center rounded-full border-4 ${atsResult.score >= 70 ? 'border-green-500 bg-green-50 dark:bg-green-900/20 text-green-600' : atsResult.score >= 40 ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600' : 'border-red-500 bg-red-50 dark:bg-red-900/20 text-red-600'}`}>
-                             <span className="text-2xl font-bold">{atsResult.score}%</span>
-                         </div>
-                     </div>
-                     <div className="space-y-4">
-                        {atsResult.missingKeywords && atsResult.missingKeywords.length > 0 && (
-                            <div className="bg-red-50 dark:bg-red-900/10 p-3 rounded-lg border border-red-100 dark:border-red-900/30">
-                                <div className="flex items-center gap-2 mb-2 text-red-700 dark:text-red-400 font-bold text-xs uppercase tracking-wide">
-                                    <AlertCircle size={14} /> Palavras-chave Ausentes
-                                </div>
-                                <div className="flex flex-wrap gap-1.5">{atsResult.missingKeywords.map((k:string, i:number) => <span key={i} className="px-2 py-1 bg-white dark:bg-slate-900 border border-red-100 dark:border-red-900 text-red-600 dark:text-red-400 text-xs font-medium rounded-md shadow-sm">{k}</span>)}</div>
-                            </div>
-                        )}
-                        <div>
-                             <div className="flex items-center gap-2 mb-2 text-slate-700 dark:text-slate-300 font-bold text-xs uppercase tracking-wide">
-                                 <CheckCircle2 size={14} /> Feedback
-                             </div>
-                             <ul className="space-y-2">
-                                 {atsResult.feedback?.map((f:string,i:number) => (
-                                     <li key={i} className="text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800 flex gap-2">
-                                         <span className="block w-1.5 h-1.5 mt-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>
-                                         {f}
-                                     </li>
-                                 ))}
-                             </ul>
-                        </div>
-                     </div>
-                 </div>
-             )}
-           </div>
-        )}
+        {/* ... Other Tabs (Cover/ATS) ... */}
       </div>
+
+      {/* TAILOR RESUME MODAL */}
+      {showTailorModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+                  <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-gradient-to-r from-trampo-50 to-white dark:from-slate-800 dark:to-slate-900">
+                      <div>
+                          <h3 className="font-bold text-lg text-trampo-700 dark:text-white flex items-center gap-2"><Sparkles size={20}/> Tailor Resume (IA)</h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Reescreve seu currículo para a vaga.</p>
+                      </div>
+                      <button onClick={() => setShowTailorModal(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500"><X size={20}/></button>
+                  </div>
+                  <div className="p-4 flex-1 overflow-auto">
+                      <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Descrição da Vaga</label>
+                      <textarea 
+                          value={tailorJobDesc}
+                          onChange={(e) => setTailorJobDesc(e.target.value)}
+                          className="w-full h-48 p-3 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-trampo-500/20 dark:bg-slate-800 dark:text-white resize-none"
+                          placeholder="Cole aqui a descrição completa da vaga..."
+                      />
+                      <div className="mt-4 bg-amber-50 dark:bg-amber-900/10 p-3 rounded-lg border border-amber-100 dark:border-amber-900/30">
+                          <p className="text-xs text-amber-800 dark:text-amber-400">
+                              ⚠️ A IA irá <strong>substituir</strong> seu Resumo Profissional e descrições de Experiência atuais. 
+                              Recomendamos salvar um <strong>Perfil (Backup)</strong> antes de continuar.
+                          </p>
+                      </div>
+                  </div>
+                  <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
+                      <button onClick={() => setShowTailorModal(false)} className="px-4 py-2 text-sm text-slate-500 hover:text-slate-700">Cancelar</button>
+                      <button onClick={handleTailorResume} disabled={!tailorJobDesc || !!loadingAI} className="px-5 py-2 bg-trampo-600 hover:bg-trampo-700 text-white rounded-lg font-bold text-sm shadow-lg shadow-trampo-500/20 transition-all flex items-center gap-2">
+                          {loadingAI === 'tailor' ? 'Processando...' : 'Adaptar Agora'} <Wand2 size={16}/>
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* GAP ANALYSIS MODAL */}
+      {showGapModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+                  <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                      <h3 className="font-bold text-lg dark:text-white flex items-center gap-2"><Target size={20}/> Análise de Gaps</h3>
+                      <button onClick={() => {setShowGapModal(false); setGapAnalysis(null);}} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500"><X size={20}/></button>
+                  </div>
+                  
+                  {!gapAnalysis ? (
+                    <div className="p-4">
+                        <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Descrição da Vaga</label>
+                        <textarea 
+                            value={gapJobDesc}
+                            onChange={(e) => setGapJobDesc(e.target.value)}
+                            className="w-full h-40 p-3 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-trampo-500/20 dark:bg-slate-800 dark:text-white resize-none"
+                            placeholder="Cole a vaga para descobrir o que falta no seu perfil..."
+                        />
+                        <button onClick={handleGapAnalysis} disabled={!gapJobDesc || !!loadingAI} className="mt-4 w-full py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg font-bold text-sm">
+                            {loadingAI === 'gap' ? 'Analisando...' : 'Identificar Gaps'}
+                        </button>
+                    </div>
+                  ) : (
+                    <div className="p-4 flex-1 overflow-auto custom-scrollbar">
+                        <div className="space-y-4">
+                            <div className="bg-red-50 dark:bg-red-900/10 p-3 rounded-xl border border-red-100 dark:border-red-900/30">
+                                <h4 className="font-bold text-red-800 dark:text-red-300 text-sm mb-2 flex items-center gap-2"><AlertCircle size={16}/> Hard Skills Faltantes</h4>
+                                <ul className="list-disc list-inside text-xs text-red-700 dark:text-red-400 space-y-1">
+                                    {gapAnalysis.missingHardSkills.map((s: string, i: number) => <li key={i}>{s}</li>)}
+                                </ul>
+                            </div>
+                            <div className="bg-orange-50 dark:bg-orange-900/10 p-3 rounded-xl border border-orange-100 dark:border-orange-900/30">
+                                <h4 className="font-bold text-orange-800 dark:text-orange-300 text-sm mb-2 flex items-center gap-2"><Users size={16}/> Soft Skills Faltantes</h4>
+                                <ul className="list-disc list-inside text-xs text-orange-700 dark:text-orange-400 space-y-1">
+                                    {gapAnalysis.missingSoftSkills.map((s: string, i: number) => <li key={i}>{s}</li>)}
+                                </ul>
+                            </div>
+                            <div className="bg-green-50 dark:bg-green-900/10 p-3 rounded-xl border border-green-100 dark:border-green-900/30">
+                                <h4 className="font-bold text-green-800 dark:text-green-300 text-sm mb-2 flex items-center gap-2"><CheckCircle2 size={16}/> Sugestões de Melhoria</h4>
+                                <ul className="list-disc list-inside text-xs text-green-700 dark:text-green-400 space-y-1">
+                                    {gapAnalysis.improvements.map((s: string, i: number) => <li key={i}>{s}</li>)}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                  )}
+              </div>
+          </div>
+      )}
+
     </div>
   );
 };

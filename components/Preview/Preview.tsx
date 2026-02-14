@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ResumeData, ThemeConfig, ResumeSettings, Skill } from '../../types';
 import { MapPin, Mail, Phone, Linkedin, Globe, Github, Twitter, ExternalLink, Dribbble, Youtube, Facebook, Instagram, Hash, Star, Code, Heart, PenTool, Award, BookOpen, Zap, Briefcase, GraduationCap } from 'lucide-react';
@@ -420,7 +419,7 @@ export const Preview: React.FC<PreviewProps> = ({ data, theme, mode = 'resume' }
                           <div className="text-right text-xs font-mono">
                               <p>{personalInfo.email}</p>
                               <p>{personalInfo.phone}</p>
-                              <p>{personalInfo.location}</p>
+                              <p>{personalInfo.address}</p>
                           </div>
                       </div>
                   </div>
