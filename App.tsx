@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Editor } from './components/Editor/Editor';
 import { Preview } from './components/Preview/Preview';
@@ -5,7 +6,9 @@ import { ConfirmDialog } from './components/ConfirmDialog';
 import { ResumeData, ThemeId, AIConfig } from './types';
 import { INITIAL_RESUME, THEMES } from './constants';
 import { getAIConfig, saveAIConfig } from './services/geminiService';
-import { Printer, Download, Upload, RotateCcw, Palette, Layout, Moon, Sun, Save, FileText, ZoomIn, ZoomOut, UserPlus, Menu, Eye, EyeOff, FileType, Bot, Settings2, Check, X, AlertCircle, Monitor, ChevronRight, Maximize } from 'lucide-react';
+import { Printer, Download, Upload, RotateCcw, Palette, Layout, Moon, Sun, Save, FileText, ZoomIn, ZoomOut, UserPlus, Menu, Eye, EyeOff, FileType, Bot, Settings2, Check, X, AlertCircle, Monitor, ChevronRight, Maximize, Briefcase } from 'lucide-react';
+import { JobTracker } from './components/JobTracker/JobTracker';
+import { Onboarding } from './components/Onboarding/Onboarding';
 
 const Toast = ({ message, onClose }: { message: string, onClose: () => void }) => {
   useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]);
@@ -24,7 +27,9 @@ const App: React.FC = () => {
   const [savedProfiles, setSavedProfiles] = useState<ResumeData[]>([]);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showMobilePreview, setShowMobilePreview] = useState(false);
-  const [focusMode, setFocusMode] = useState(false); // NEW STATE
+  const [focusMode, setFocusMode] = useState(false);
+  const [showJobTracker, setShowJobTracker] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false); // NEW
   
   // AI Settings State
   const [showAISettings, setShowAISettings] = useState(false);
@@ -65,6 +70,12 @@ const App: React.FC = () => {
     }
     const dark = localStorage.getItem('trampolin_dark');
     if (dark === 'true') { setDarkMode(true); document.documentElement.classList.add('dark'); }
+    
+    // Check onboarding
+    const hasSeenOnboarding = localStorage.getItem('trampolin_onboarding');
+    if (!hasSeenOnboarding) {
+        setTimeout(() => setShowOnboarding(true), 1000);
+    }
     
     // Fit to Screen initially
     handleAutoFit();
@@ -263,6 +274,11 @@ const App: React.FC = () => {
       setToastMessage("Ajustado à tela");
   };
 
+  const completeOnboarding = () => {
+      setShowOnboarding(false);
+      localStorage.setItem('trampolin_onboarding', 'true');
+  };
+
   return (
     <div className="h-screen bg-slate-100 dark:bg-slate-950 flex flex-col font-sans text-slate-800 dark:text-slate-200 overflow-hidden selection:bg-trampo-500/30">
       
@@ -277,6 +293,9 @@ const App: React.FC = () => {
             <div className="flex items-center gap-2 lg:gap-3">
               <button onClick={() => setShowMobilePreview(!showMobilePreview)} className="md:hidden p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium text-xs">
                   {showMobilePreview ? 'Editar' : 'Ver PDF'}
+              </button>
+              <button onClick={() => setShowJobTracker(true)} className="hidden sm:flex items-center gap-2 px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700 text-sm font-medium" title="Gerenciar Vagas">
+                  <Briefcase size={18}/> <span className="hidden lg:inline">Vagas</span>
               </button>
               <button onClick={() => setShowAISettings(true)} className={`p-2.5 rounded-xl transition-colors ${showAISettings ? 'bg-trampo-100 text-trampo-600 dark:bg-trampo-900/30 dark:text-trampo-400' : 'text-slate-500 hover:text-trampo-600 hover:bg-trampo-50 dark:hover:bg-trampo-900/10'}`} title="Configurar IA"><Bot size={20}/></button>
               <div className="relative">
@@ -503,6 +522,12 @@ const App: React.FC = () => {
                       </div>
                    </div>
                 )}
+
+                {/* Job Tracker Modal */}
+                {showJobTracker && <JobTracker onClose={() => setShowJobTracker(false)} />}
+                
+                {/* Onboarding Tour */}
+                {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
 
                 {/* Resume Paper Container */}
                 <div 

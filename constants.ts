@@ -223,6 +223,7 @@ export const AVAILABLE_FONTS = [
   { name: 'Raleway', value: 'font-raleway' },
   { name: 'Oswald (Strong)', value: 'font-[Oswald]' },
   { name: 'Playfair (Elegant)', value: 'font-[Playfair_Display]' },
+  { name: 'Comic Neue (Dislexia)', value: 'font-dyslexic' },
 ];
 
 export const FONT_PAIRINGS = [

@@ -1,6 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { AIConfig, ResumeData, TailoredContent, GapAnalysis } from "../types";
+import { AIConfig, ResumeData, TailoredContent, GapAnalysis, PhotoAnalysis } from "../types";
 
 // Configuração Padrão
 const DEFAULT_GEMINI_MODEL = 'gemini-3-flash-preview';
@@ -256,6 +256,50 @@ export const analyzeGap = async (data: ResumeData, jobDescription: string): Prom
         const response = await callLLM(prompt, system, true);
         return JSON.parse(cleanJSON(response));
     } catch (e) {
+        return null;
+    }
+};
+
+export const estimateSalary = async (data: ResumeData): Promise<string> => {
+    try {
+        const system = `Aja como um especialista em compensação salarial (RH). Analise o perfil.
+        Retorne uma estimativa de faixa salarial mensal (em BRL - Reais) para o mercado brasileiro.
+        Considere a senioridade implícita e localização.
+        Retorne apenas a string: ex: "R$ 5.000 - R$ 7.000 (Junior)" ou "R$ 15k - R$ 20k (Senior)". Seja direto.`;
+
+        const prompt = `Cargo: ${data.personalInfo.jobTitle}. Local: ${data.personalInfo.address}. Skills: ${data.skills.map(s => s.name).join(', ')}. Exp (anos): ${data.experience.length * 2} (aprox)`;
+        return await callLLM(prompt, system);
+    } catch (e) { return "R$ N/A"; }
+};
+
+export const analyzePhoto = async (base64Image: string): Promise<PhotoAnalysis | null> => {
+    const config = getAIConfig();
+    
+    // Remove header data if present (data:image/jpeg;base64,)
+    const cleanBase64 = base64Image.split(',')[1] || base64Image;
+
+    try {
+        // Only Gemini supports vision natively in this setup for now
+        if (config.provider === 'gemini') {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const model = ai.getGenerativeModel({ model: "gemini-2.0-flash-001" });
+            
+            const prompt = `Aja como um recrutador profissional. Analise esta foto de perfil para um currículo (LinkedIn/CV).
+            Critérios: Iluminação, Fundo, Expressão, Vestimenta.
+            Retorne APENAS JSON: { "score": 0-100, "feedback": ["dica 1", "dica 2"], "lighting": "good"|"average"|"bad", "professionalism": "high"|"medium"|"low" }`;
+            
+            const result = await model.generateContent([
+                prompt,
+                { inlineData: { data: cleanBase64, mimeType: "image/jpeg" } }
+            ]);
+            
+            return JSON.parse(cleanJSON(result.response.text()));
+        } else {
+             // Fallback text if using OpenRouter without vision capabilities configured
+             return null;
+        }
+    } catch (e) {
+        console.error("Photo Analysis Error", e);
         return null;
     }
 };

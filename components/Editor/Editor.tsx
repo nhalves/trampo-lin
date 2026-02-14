@@ -1,8 +1,9 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ResumeData, ResumeSettings } from '../../types';
-import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Wand2, Eye, EyeOff, ArrowUp, ArrowDown, Settings, Briefcase, GraduationCap, Medal, Code, User, Languages, FileText, Search, QrCode, Heart, Award, Users, FilePlus, Copy, Eraser, Languages as LangIcon, Upload, X, Type, Undo2, Redo2, Download, RefreshCw, Star, Globe, PenTool, CheckCircle2, AlertCircle, FileUp, Calendar, Link2, Mail, Phone, MapPin, FileJson, Twitter, Dribbble, Hash, Bold, Italic, List, Linkedin, BookOpen, Feather, Zap, Smile, Book, Timer, MessageSquare, Briefcase as BriefcaseIcon, LayoutGrid, GripVertical, Target, Maximize2, Minimize2 } from 'lucide-react';
-import { improveText, generateSummary, suggestSkills, generateCoverLetter, analyzeJobMatch, translateText, generateBulletPoints, extractResumeFromPdf, generateInterviewQuestions, generateLinkedinHeadline, tailorResume, analyzeGap } from '../../services/geminiService';
+import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Wand2, Eye, EyeOff, ArrowUp, ArrowDown, Settings, Briefcase, GraduationCap, Medal, Code, User, Languages, FileText, Search, QrCode, Heart, Award, Users, FilePlus, Copy, Eraser, Languages as LangIcon, Upload, X, Type, Undo2, Redo2, Download, RefreshCw, Star, Globe, PenTool, CheckCircle2, AlertCircle, FileUp, Calendar, Link2, Mail, Phone, MapPin, FileJson, Twitter, Dribbble, Hash, Bold, Italic, List, Linkedin, BookOpen, Feather, Zap, Smile, Book, Timer, MessageSquare, Briefcase as BriefcaseIcon, LayoutGrid, GripVertical, Target, Maximize2, Minimize2, Camera, DollarSign, Mic, MicOff, Palette, Github, Check } from 'lucide-react';
+import { improveText, generateSummary, suggestSkills, generateCoverLetter, analyzeJobMatch, translateText, generateBulletPoints, extractResumeFromPdf, generateInterviewQuestions, generateLinkedinHeadline, tailorResume, analyzeGap, estimateSalary, analyzePhoto } from '../../services/geminiService';
+import { fetchGithubRepos, extractDominantColor } from '../../services/integrationService';
 import { AVAILABLE_FONTS, INITIAL_RESUME, FONT_PAIRINGS, EXAMPLE_PERSONAS } from '../../constants';
 
 interface EditorProps {
@@ -40,6 +41,9 @@ const handleDateInput = (value: string) => {
     }
     return v;
 };
+
+// Helper: Speech Recognition
+const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
 // --- OPTIMIZED INPUT COMPONENTS (DEBOUNCED) ---
 
@@ -88,7 +92,9 @@ const DebouncedInput = ({ label, value, onChange, type = "text", placeholder = "
 
 const DebouncedTextarea = ({ value, onChange, placeholder, className, id }: any) => {
     const [localValue, setLocalValue] = useState(value);
+    const [isListening, setIsListening] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const recognitionRef = useRef<any>(null);
 
     // Sync from props
     useEffect(() => {
@@ -145,10 +151,60 @@ const DebouncedTextarea = ({ value, onChange, placeholder, className, id }: any)
         }, 0);
     };
 
+    const toggleListening = () => {
+        if (!SpeechRecognition) {
+            alert("Seu navegador não suporta reconhecimento de voz.");
+            return;
+        }
+
+        if (isListening) {
+            recognitionRef.current?.stop();
+            setIsListening(false);
+        } else {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'pt-BR';
+            recognition.continuous = true;
+            recognition.interimResults = true;
+
+            recognition.onresult = (event: any) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+                
+                if (finalTranscript) {
+                    const newValue = (localValue ? localValue + ' ' : '') + finalTranscript;
+                    setLocalValue(newValue);
+                    onChange({ target: { value: newValue } });
+                }
+            };
+
+            recognition.onerror = (event: any) => {
+                console.error(event.error);
+                setIsListening(false);
+            };
+            
+            recognition.onend = () => setIsListening(false);
+
+            recognition.start();
+            recognitionRef.current = recognition;
+            setIsListening(true);
+        }
+    };
+
     return (
         <div className="relative group">
-             <div className="opacity-0 group-focus-within:opacity-100 transition-opacity absolute -top-8 right-0 z-10">
-                <div className="flex gap-1 mb-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg w-fit shadow-sm border border-slate-200 dark:border-slate-700">
+             <div className="opacity-0 group-focus-within:opacity-100 transition-opacity absolute -top-8 right-0 z-10 flex items-center gap-2">
+                <button onClick={toggleListening} className={`p-1.5 rounded-lg border shadow-sm transition-colors flex items-center gap-1 text-[10px] font-bold uppercase ${isListening ? 'bg-red-50 border-red-200 text-red-600 animate-pulse' : 'bg-white border-slate-200 text-slate-500 hover:text-trampo-600'}`} title="Ditar texto">
+                    {isListening ? <MicOff size={12}/> : <Mic size={12}/>} {isListening ? 'Gravando...' : 'Ditar'}
+                </button>
+                <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg w-fit shadow-sm border border-slate-200 dark:border-slate-700">
                     <button onClick={() => handleMarkdown('**', true)} className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Negrito"><Bold size={12}/></button>
                     <button onClick={() => handleMarkdown('*', true)} className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Itálico"><Italic size={12}/></button>
                     <button onClick={() => handleMarkdown('\n• ', false)} className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Lista"><List size={12}/></button>
@@ -157,7 +213,7 @@ const DebouncedTextarea = ({ value, onChange, placeholder, className, id }: any)
             <textarea
                 id={id}
                 ref={textareaRef}
-                className={`${className} resize-none overflow-hidden`}
+                className={`${className} resize-none overflow-hidden ${isListening ? 'ring-2 ring-red-200 border-red-300' : ''}`}
                 value={localValue}
                 onChange={handleChange}
                 placeholder={placeholder}
@@ -213,6 +269,8 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
   const [tailorJobDesc, setTailorJobDesc] = useState('');
   const [gapJobDesc, setGapJobDesc] = useState('');
   const [gapAnalysis, setGapAnalysis] = useState<any>(null);
+  const [estimatedSalary, setEstimatedSalary] = useState<string>('');
+  const [githubUsername, setGithubUsername] = useState('');
   
   // Extra Tools State
   const [interviewQs, setInterviewQs] = useState<string>('');
@@ -353,8 +411,23 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
         return;
       }
       const reader = new FileReader();
-      reader.onloadend = () => {
-        handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, photoUrl: reader.result as string } });
+      reader.onloadend = async () => {
+        const photoUrl = reader.result as string;
+        
+        // Extract color automatically
+        try {
+            const dominantColor = await extractDominantColor(photoUrl);
+            if (dominantColor) {
+                onRequestConfirm(
+                    "Cor Detectada", 
+                    "Deseja aplicar a cor predominante da sua foto ao tema do currículo?",
+                    () => updateSettings('primaryColor', dominantColor),
+                    'info'
+                );
+            }
+        } catch(e) {}
+
+        handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, photoUrl } });
       };
       reader.readAsDataURL(file);
     }
@@ -524,6 +597,28 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
       setLoadingAI(null);
   };
 
+  // NEW: PHOTO ANALYSIS
+  const handlePhotoAnalysis = async () => {
+      if (!data.personalInfo.photoUrl) return;
+      setLoadingAI('photo');
+      const analysis = await analyzePhoto(data.personalInfo.photoUrl);
+      setLoadingAI(null);
+      
+      if (analysis) {
+          const msg = `Nota: ${analysis.score}/100\nFeedback: ${analysis.feedback.join('. ')}`;
+          onRequestConfirm("Análise da Foto", msg, () => {}, 'info');
+      } else {
+          onShowToast("Erro ao analisar foto (Verifique se é JPEG/PNG).");
+      }
+  };
+
+  const handleEstimateSalary = async () => {
+      setLoadingAI('salary');
+      const result = await estimateSalary(data);
+      setEstimatedSalary(result);
+      setLoadingAI(null);
+  };
+
   const handleTranslate = async (lang: string) => {
      onRequestConfirm(
         `Traduzir para ${lang}?`,
@@ -647,6 +742,32 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
           settings: { ...data.settings, headerFont: pair.header, bodyFont: pair.body }
       });
       onShowToast(`Fonte ${pair.name} aplicada!`);
+  };
+
+  const handleGithubImport = async () => {
+      if (!githubUsername) {
+          onShowToast("Digite o usuário do GitHub.");
+          return;
+      }
+      setLoadingAI('github');
+      const repos = await fetchGithubRepos(githubUsername);
+      if (repos && repos.length > 0) {
+          const newProjects = repos.map((repo: any) => ({
+              id: Date.now() + Math.random().toString(),
+              name: repo.name,
+              description: repo.description || 'Sem descrição',
+              url: repo.html_url,
+              startDate: repo.updated_at.split('T')[0].substring(0, 7),
+              endDate: ''
+          }));
+          
+          handleChangeWithHistory({ ...data, projects: [...data.projects, ...newProjects] });
+          onShowToast(`${newProjects.length} repositórios importados!`);
+          setOpenSection('projects');
+      } else {
+          onShowToast("Nenhum repositório público encontrado ou erro na busca.");
+      }
+      setLoadingAI(null);
   };
 
   // --- Renderers ---
@@ -793,7 +914,7 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                 </button>
              </div>
 
-             {/* Stats & Checklist Widget (New) */}
+             {/* Stats & Checklist Widget */}
              <div className="grid grid-cols-2 gap-4 mb-2">
                  <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col gap-1">
                      <span className="text-[10px] uppercase font-bold text-slate-400">Progresso</span>
@@ -827,7 +948,14 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                    </div>
                    <div>
                       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
-                      <button onClick={() => fileInputRef.current?.click()} className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 font-medium transition-colors shadow-sm">Carregar Foto</button>
+                      <div className="flex gap-2">
+                          <button onClick={() => fileInputRef.current?.click()} className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 font-medium transition-colors shadow-sm">Carregar Foto</button>
+                          {data.personalInfo.photoUrl && (
+                              <button onClick={handlePhotoAnalysis} disabled={!!loadingAI} className="text-xs flex items-center gap-1 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 px-3 py-2 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/40 text-purple-600 dark:text-purple-300 font-bold transition-colors shadow-sm">
+                                  {loadingAI === 'photo' ? 'Analisando...' : <><Camera size={14}/> Avaliar IA</>}
+                              </button>
+                          )}
+                      </div>
                       <p className="text-[10px] text-slate-400 mt-2">Recomendado: 1:1, máx 2MB</p>
                    </div>
                 </div>
@@ -900,7 +1028,6 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                ])}
              </Section>
 
-             {/* ... Other sections omitted for brevity but should remain ... */}
              <Section title="Habilidades" icon={Sparkles} isOpen={openSection === 'skills'} onToggle={() => toggleSection('skills')} isVisible={data.settings.visibleSections.skills} onVisibilityToggle={() => toggleVisibility('skills')} onClear={() => clearList('skills')} itemCount={data.skills.length}>
                 <div className="flex flex-wrap gap-2 mb-4">
                   {data.skills.map((skill, index) => (
@@ -973,7 +1100,6 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                    <div key={section.id} className="mb-6 p-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900">
                       <div className="flex justify-between items-center mb-4">
                          <div className="flex gap-2 items-center flex-1">
-                             {/* Icon Selector */}
                              <div className="relative group">
                                 <button className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:shadow-sm text-slate-500">
                                    {CUSTOM_ICONS.find(c => c.id === section.icon)?.icon ? React.createElement(CUSTOM_ICONS.find(c => c.id === section.icon)!.icon, {size: 18}) : <FileText size={18}/>}
@@ -1012,9 +1138,25 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
              </Section>
              
              <Section title="Projetos" icon={Code} isOpen={openSection === 'projects'} onToggle={() => toggleSection('projects')} isVisible={data.settings.visibleSections.projects} onVisibilityToggle={() => toggleVisibility('projects')} onClear={() => clearList('projects')} itemCount={data.projects.length}>
+               <div className="mb-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-lg">
+                   <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-2 block">Importar do GitHub</label>
+                   <div className="flex gap-2">
+                       <input 
+                           type="text" 
+                           value={githubUsername} 
+                           onChange={(e) => setGithubUsername(e.target.value)} 
+                           placeholder="Usuário (ex: facebook)" 
+                           className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                       />
+                       <button onClick={handleGithubImport} disabled={!githubUsername || !!loadingAI} className="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-slate-700 disabled:opacity-50">
+                           {loadingAI === 'github' ? '...' : <Github size={16}/>}
+                       </button>
+                   </div>
+               </div>
                {renderGenericList('projects', 'name', 'url', { name: 'Projeto', url: '' }, [{key:'name', label:'Nome do Projeto'}, {key:'url', label:'Link (URL)', placeholder: 'ex: github.com/projeto'}])}
              </Section>
              
+             {/* ... Rest of sections (Idiomas, Settings) ... */}
              <Section title="Idiomas" icon={Languages} isOpen={openSection === 'languages'} onToggle={() => toggleSection('languages')} isVisible={data.settings.visibleSections.languages} onVisibilityToggle={() => toggleVisibility('languages')} onClear={() => clearList('languages')} itemCount={data.languages.length}>
                 <div className="flex flex-wrap gap-2">
                    {data.languages.map((l, i) => (
@@ -1029,8 +1171,8 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
 
              {/* Settings Section */}
              <Section title="Configurações & Visual" icon={Settings} isOpen={openSection === 'settings'} onToggle={() => toggleSection('settings')}>
+               {/* ... Settings Content ... */}
                <div className="space-y-5">
-                 {/* Reused settings code... */}
                  <div className="grid grid-cols-2 gap-3">
                     <DebouncedInput label="Tam. Fonte" value={data.settings.fontScale} onChange={(v: string) => updateSettings('fontScale', v)} type="number" step="0.05" />
                     <DebouncedInput label="Margem" value={data.settings.marginScale} onChange={(v: string) => updateSettings('marginScale', v)} type="number" step="0.1" />
@@ -1057,7 +1199,6 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                      </div>
                  </div>
 
-                 {/* Font Pairings */}
                  <div>
                     <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-2">Combinações de Fontes</label>
                     <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar snap-x">
@@ -1067,6 +1208,8 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                     </div>
                  </div>
 
+                 {/* ... Other Settings Inputs ... */}
+                 
                  <div className="grid grid-cols-2 gap-3">
                    <div>
                       <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Fonte Título</label>
@@ -1184,6 +1327,20 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                     <p className="text-xs text-amber-700 dark:text-amber-400">Recursos poderosos para impulsionar sua candidatura.</p>
                 </div>
 
+                {/* Salary Estimator */}
+                <div className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+                     <h4 className="font-bold text-sm mb-2 flex items-center gap-2"><DollarSign size={16}/> Estimativa de Salário</h4>
+                     <p className="text-xs text-slate-500 mb-4">Com base no seu perfil, veja uma estimativa de mercado.</p>
+                     <button onClick={handleEstimateSalary} disabled={!!loadingAI} className="w-full py-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg text-xs font-bold hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
+                         {loadingAI === 'salary' ? 'Calculando...' : 'Calcular Estimativa'}
+                     </button>
+                     {estimatedSalary && (
+                         <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg text-sm text-green-800 dark:text-green-200 font-bold border border-green-200 dark:border-green-800 text-center">
+                             {estimatedSalary}
+                         </div>
+                     )}
+                </div>
+
                 {/* Gap Analysis */}
                 <div className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
                      <h4 className="font-bold text-sm mb-2 flex items-center gap-2"><Target size={16}/> Análise de Gaps (Skills Faltantes)</h4>
@@ -1220,10 +1377,145 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
             </div>
         )}
 
-        {/* ... Other Tabs (Cover/ATS) ... */}
+        {/* ATS TAB */}
+        {activeTab === 'ats' && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+                    <h3 className="font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-2 mb-2"><Search size={20}/> ATS Match Score</h3>
+                    <p className="text-xs text-emerald-700 dark:text-emerald-400">Verifique se seu currículo passa nos robôs de recrutamento.</p>
+                </div>
+
+                <div className="space-y-4">
+                    {/* PDF UPLOAD FOR ATS */}
+                    <div className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+                        <label className="block text-xs font-bold uppercase text-slate-500 mb-2">1. Anexar Currículo (PDF)</label>
+                        <div className="flex gap-2 items-center">
+                            <input type="file" ref={atsPdfInputRef} className="hidden" accept=".pdf" onChange={handleAtsPdfUpload} />
+                            <button onClick={() => atsPdfInputRef.current?.click()} className="flex-1 py-3 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-500 dark:text-slate-400 hover:border-trampo-500 hover:text-trampo-600 flex flex-col items-center justify-center gap-1 transition-all">
+                                {atsFile ? (
+                                    <span className="flex items-center gap-2 text-trampo-600 font-bold"><Check size={16}/> {atsFile.name}</span>
+                                ) : (
+                                    <>
+                                        <Upload size={18}/>
+                                        <span className="text-xs font-bold">Carregar PDF</span>
+                                    </>
+                                )}
+                            </button>
+                            {atsFile && (
+                                <button onClick={handleConvertToEditor} className="p-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600" title="Converter para o Editor">
+                                    <FileText size={18}/>
+                                </button>
+                            )}
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-2 text-center">Ou usaremos os dados atuais do editor.</p>
+                    </div>
+
+                    <div className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+                        <label className="block text-xs font-bold uppercase text-slate-500 mb-2">2. Descrição da Vaga</label>
+                        <textarea 
+                            value={jobDescription}
+                            onChange={(e) => setJobDescription(e.target.value)}
+                            className="w-full h-32 p-3 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-trampo-500/20 dark:bg-slate-900 dark:text-white resize-none"
+                            placeholder="Cole a descrição completa da vaga aqui..."
+                        />
+                    </div>
+
+                    <button onClick={handleRunAtsAnalysis} disabled={!jobDescription || !!loadingAI} className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2">
+                        {loadingAI === 'ats' ? 'Analisando...' : 'Rodar Análise ATS'} <Search size={18}/>
+                    </button>
+
+                    {atsResult && (
+                        <div className="p-5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm animate-in zoom-in-95 duration-300">
+                            <div className="flex items-center justify-between mb-4">
+                                <h4 className="font-bold text-lg dark:text-white">Resultado</h4>
+                                <div className={`text-xl font-black px-3 py-1 rounded-lg ${atsResult.score >= 70 ? 'bg-green-100 text-green-700' : atsResult.score >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                                    {atsResult.score}/100
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <span className="text-xs font-bold text-slate-400 uppercase">Feedback</span>
+                                    <ul className="mt-1 space-y-1">
+                                        {atsResult.feedback.map((item: string, i: number) => (
+                                            <li key={i} className="text-sm text-slate-600 dark:text-slate-300 flex gap-2 items-start">
+                                                <span className="mt-1 w-1.5 h-1.5 rounded-full bg-slate-400 flex-shrink-0"></span>
+                                                {item}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                
+                                {atsResult.missingKeywords?.length > 0 && (
+                                    <div>
+                                        <span className="text-xs font-bold text-red-400 uppercase">Palavras-chave Faltantes</span>
+                                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                            {atsResult.missingKeywords.map((kw: string, i: number) => (
+                                                <span key={i} className="px-2 py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-xs rounded font-medium border border-red-100 dark:border-red-900/30">
+                                                    {kw}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        )}
+
+        {/* COVER LETTER TAB */}
+        {activeTab === 'cover' && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="bg-purple-50 dark:bg-purple-900/10 p-4 rounded-xl border border-purple-100 dark:border-purple-900/30">
+                    <h3 className="font-bold text-purple-900 dark:text-purple-300 flex items-center gap-2 mb-2"><Wand2 size={20}/> Carta de Apresentação</h3>
+                    <p className="text-xs text-purple-700 dark:text-purple-400">Crie uma carta personalizada em segundos.</p>
+                </div>
+
+                <div className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                        <DebouncedInput 
+                            label="Nome do Recrutador (Opcional)" 
+                            value={data.coverLetter.recipientName} 
+                            onChange={(v: string) => handleChangeWithHistory({...data, coverLetter: {...data.coverLetter, recipientName: v}})} 
+                            placeholder="Ex: João Silva" 
+                        />
+                        <DebouncedInput 
+                            label="Nome da Empresa" 
+                            value={data.coverLetter.companyName} 
+                            onChange={(v: string) => handleChangeWithHistory({...data, coverLetter: {...data.coverLetter, companyName: v}})} 
+                            placeholder="Ex: Google" 
+                        />
+                    </div>
+                    <DebouncedInput 
+                        label="Cargo da Vaga" 
+                        value={data.coverLetter.jobTitle} 
+                        onChange={(v: string) => handleChangeWithHistory({...data, coverLetter: {...data.coverLetter, jobTitle: v}})} 
+                        placeholder="Ex: Senior Frontend Engineer" 
+                    />
+                    
+                    <button onClick={handleAICoverLetter} disabled={!data.coverLetter.companyName || !!loadingAI} className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold shadow-lg shadow-purple-500/20 transition-all flex items-center justify-center gap-2">
+                        {loadingAI === 'cover-letter' ? 'Escrevendo...' : 'Gerar com IA'} <Sparkles size={16}/>
+                    </button>
+                </div>
+
+                <div className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+                    <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Conteúdo da Carta</label>
+                    <DebouncedTextarea 
+                        id="cover-content"
+                        value={data.coverLetter.content} 
+                        onChange={(e: any) => handleChangeWithHistory({...data, coverLetter: {...data.coverLetter, content: e.target.value}})} 
+                        className="w-full min-h-[300px] p-4 border border-slate-200 dark:border-slate-700 rounded-lg text-sm leading-relaxed focus:ring-2 focus:ring-trampo-500/20 dark:bg-slate-900 dark:text-slate-200 outline-none" 
+                        placeholder="Sua carta aparecerá aqui..." 
+                    />
+                </div>
+            </div>
+        )}
+
       </div>
 
-      {/* TAILOR RESUME MODAL */}
+      {/* TAILOR RESUME MODAL & GAP ANALYSIS MODAL (Same as previous) */}
       {showTailorModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
               <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
@@ -1259,7 +1551,6 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
           </div>
       )}
 
-      {/* GAP ANALYSIS MODAL */}
       {showGapModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
               <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">

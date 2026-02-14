@@ -5,6 +5,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Trampo-lin | Criador de Currículos</title>
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0ea5e9" />
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -21,9 +23,9 @@
               open: ['Open Sans', 'sans-serif'],
               montserrat: ['Montserrat', 'sans-serif'],
               raleway: ['Raleway', 'sans-serif'],
-              // Fontes Premium adicionadas
               oswald: ['Oswald', 'sans-serif'],
               playfair: ['Playfair Display', 'serif'],
+              dyslexic: ['Comic Neue', 'cursive'], // Dyslexia friendly alternative
             },
             colors: {
               trampo: {
@@ -49,7 +51,7 @@
     </script>
     
     <!-- Importação de TODAS as fontes utilizadas nos temas -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:wght@300;400;700&family=Roboto+Mono:wght@400;500&family=Poppins:wght@400;600;700&family=Lato:wght@400;700&family=Open+Sans:wght@400;600&family=Montserrat:wght@400;600;700&family=Raleway:wght@400;600&family=Oswald:wght@400;500;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:wght@300;400;700&family=Roboto+Mono:wght@400;500&family=Poppins:wght@400;600;700&family=Lato:wght@400;700&family=Open+Sans:wght@400;600&family=Montserrat:wght@400;600;700&family=Raleway:wght@400;600&family=Oswald:wght@400;500;700&family=Playfair+Display:wght@400;600;700&family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
       /* Custom Scrollbar */
@@ -95,7 +97,8 @@
         #editor-sidebar,
         .preview-controls,
         .theme-selector-modal,
-        .ai-settings-modal {
+        .ai-settings-modal,
+        .job-tracker-modal {
           display: none !important;
         }
 

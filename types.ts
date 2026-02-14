@@ -222,3 +222,30 @@ export interface TailoredContent {
     rewrittenDescription: string;
   }[];
 }
+
+export type JobStatus = 'wishlist' | 'applied' | 'interview' | 'offer' | 'rejected';
+
+export interface JobApplication {
+  id: string;
+  company: string;
+  role: string;
+  status: JobStatus;
+  dateAdded: string;
+  url?: string;
+  salary?: string;
+  notes?: string;
+}
+
+export interface PhotoAnalysis {
+  score: number;
+  feedback: string[];
+  lighting: 'good' | 'bad' | 'average';
+  professionalism: 'high' | 'medium' | 'low';
+}
+
+export interface OnboardingStep {
+  target: string;
+  title: string;
+  content: string;
+  position: 'top' | 'bottom' | 'left' | 'right' | 'center';
+}
