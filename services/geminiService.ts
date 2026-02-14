@@ -1,19 +1,24 @@
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { AIConfig, ResumeData, TailoredContent, GapAnalysis, PhotoAnalysis } from "../types";
 
 // Configuração Padrão
-const DEFAULT_GEMINI_MODEL = 'gemini-3-flash-preview';
+const DEFAULT_GEMINI_MODEL = 'gemini-3-flash-preview'; // Updated to flash preview for speed/cost
 const DEFAULT_OPENROUTER_MODEL = 'google/gemini-2.0-flash-001'; 
 
 export const getAIConfig = (): AIConfig => {
   const saved = localStorage.getItem('trampolin_ai_config');
   if (saved) {
-    return JSON.parse(saved);
+    const parsed = JSON.parse(saved);
+    // Ensure we don't have partial invalid state
+    return {
+        ...parsed,
+        // If provider is gemini and no user key, fallback logic happens in callLLM
+    };
   }
   return {
     provider: 'gemini',
-    apiKey: '', // Se vazio, usa process.env no caso do Gemini
+    apiKey: '', 
     model: DEFAULT_GEMINI_MODEL
   };
 };
@@ -22,19 +27,40 @@ export const saveAIConfig = (config: AIConfig) => {
   localStorage.setItem('trampolin_ai_config', JSON.stringify(config));
 };
 
+// Helper to get the effective API Key
+const getEffectiveApiKey = (config: AIConfig): string => {
+    // 1. User provided key in Settings
+    if (config.apiKey && config.apiKey.trim() !== '') {
+        return config.apiKey;
+    }
+    // 2. Environment variable injected at build time
+    if (process.env.API_KEY && process.env.API_KEY.trim() !== '') {
+        return process.env.API_KEY;
+    }
+    return '';
+};
+
 // --- CORE LLM FUNCTION ---
-const callLLM = async (prompt: string | any[], systemInstruction?: string, jsonMode: boolean = false): Promise<string> => {
+const callLLM = async (
+    prompt: string | any[], 
+    systemInstruction?: string, 
+    jsonMode: boolean = false, 
+    responseSchema?: any
+): Promise<string> => {
     const config = getAIConfig();
+    const apiKey = getEffectiveApiKey(config);
+
+    if (!apiKey) {
+        throw new Error("API Key não encontrada. Por favor, configure sua chave nas configurações de IA (ícone de robô).");
+    }
 
     // 1. OPENROUTER HANDLER
     if (config.provider === 'openrouter') {
-        if (!config.apiKey) throw new Error("API Key do OpenRouter não configurada.");
-        
         try {
             const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                 method: "POST",
                 headers: {
-                    "Authorization": `Bearer ${config.apiKey}`,
+                    "Authorization": `Bearer ${apiKey}`,
                     "Content-Type": "application/json",
                     "HTTP-Referer": window.location.origin, 
                     "X-Title": "Trampo-lin Resume Builder",
@@ -43,8 +69,9 @@ const callLLM = async (prompt: string | any[], systemInstruction?: string, jsonM
                     model: config.model || DEFAULT_OPENROUTER_MODEL,
                     messages: [
                         { role: "system", content: systemInstruction || "You are a helpful assistant." },
-                        { role: "user", content: prompt }
+                        { role: "user", content: typeof prompt === 'string' ? prompt : JSON.stringify(prompt) }
                     ],
+                    // OpenRouter simple JSON mode
                     response_format: jsonMode ? { type: "json_object" } : undefined
                 })
             });
@@ -64,14 +91,17 @@ const callLLM = async (prompt: string | any[], systemInstruction?: string, jsonM
 
     // 2. GEMINI HANDLER (DEFAULT)
     else {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: apiKey });
         const modelName = config.model || DEFAULT_GEMINI_MODEL;
 
-        let contents: any = prompt;
+        let contents: any;
         if (typeof prompt === 'string') {
-            contents = prompt;
+            contents = { parts: [{ text: prompt }] };
+        } else if (Array.isArray(prompt)) {
+             // Handle array of parts (multimodal)
+             contents = { parts: prompt };
         } else {
-             contents = { parts: prompt.map((p: any) => p.text ? { text: p.text } : { text: JSON.stringify(p) }) };
+             contents = prompt;
         }
 
         try {
@@ -80,12 +110,17 @@ const callLLM = async (prompt: string | any[], systemInstruction?: string, jsonM
                 contents: contents,
                 config: {
                     systemInstruction: systemInstruction,
-                    responseMimeType: jsonMode ? "application/json" : "text/plain"
+                    responseMimeType: jsonMode ? "application/json" : "text/plain",
+                    responseSchema: responseSchema,
                 }
             });
             return response.text || "";
-        } catch (error) {
+        } catch (error: any) {
             console.error("Gemini Error:", error);
+            // Improve error message for users
+            if (error.message?.includes('API key')) {
+                throw new Error("Chave de API inválida. Verifique suas configurações.");
+            }
             throw error;
         }
     }
@@ -93,17 +128,27 @@ const callLLM = async (prompt: string | any[], systemInstruction?: string, jsonM
 
 const cleanJSON = (text: string): string => {
   if (!text) return "{}";
-  const cleaned = text.replace(/```json\n?|```/g, '').trim();
+  // Remove Markdown code blocks
+  let cleaned = text.replace(/```json\n?|```/g, '').trim();
+  // Find valid JSON bounds
   const firstBrace = cleaned.indexOf('{');
   const lastBrace = cleaned.lastIndexOf('}');
-  if (firstBrace >= 0 && lastBrace > firstBrace) {
-      return cleaned.substring(firstBrace, lastBrace + 1);
-  }
   const firstBracket = cleaned.indexOf('[');
   const lastBracket = cleaned.lastIndexOf(']');
+
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+      // It's likely an object
+      // Check if array is outer (sometimes models wrap objects in arrays)
+      if (firstBracket >= 0 && firstBracket < firstBrace && lastBracket > lastBrace) {
+          return cleaned.substring(firstBracket, lastBracket + 1);
+      }
+      return cleaned.substring(firstBrace, lastBrace + 1);
+  }
+  
   if (firstBracket >= 0 && lastBracket > firstBracket) {
       return cleaned.substring(firstBracket, lastBracket + 1);
   }
+  
   return cleaned;
 };
 
@@ -137,7 +182,8 @@ export const improveText = async (text: string, context: string = 'resume', tone
 
     return await callLLM(`Texto original (seção: ${context}): "${text}"`, system);
   } catch (error) {
-    return text;
+    console.error(error);
+    return text; // Fallback to original
   }
 };
 
@@ -179,13 +225,18 @@ export const generateSummary = async (jobTitle: string, experience: any[]): Prom
 
 export const suggestSkills = async (jobTitle: string): Promise<string[]> => {
   try {
-    const system = `Liste 8 habilidades (Hard/Soft Skills) essenciais para o cargo.
-    Retorne APENAS um Array JSON de strings. Exemplo: ["Java", "Liderança"]`;
+    const system = `Liste 8 habilidades (Hard/Soft Skills) essenciais para o cargo.`;
     
-    const response = await callLLM(`Cargo: "${jobTitle}"`, system, true);
+    const schema = {
+        type: Type.ARRAY,
+        items: { type: Type.STRING }
+    };
+    
+    const response = await callLLM(`Cargo: "${jobTitle}"`, system, true, schema);
     const clean = cleanJSON(response);
     return JSON.parse(clean);
   } catch (error) {
+    console.error("Suggest Skills Error", error);
     return [];
   }
 };
@@ -232,12 +283,28 @@ export const tailorResume = async (data: ResumeData, jobDescription: string): Pr
         2. Use palavras-chave da vaga para refrasear as experiências existentes.
         3. Destaque resultados que conectam com a vaga.
         4. O Resumo deve ser direto e usar a nomenclatura da vaga.
-        5. Retorne APENAS JSON no formato: { "summary": "novo resumo...", "experience": [{ "id": "id_da_experiencia_original", "rewrittenDescription": "nova descrição..." }] }
         `;
+
+        const schema = {
+            type: Type.OBJECT,
+            properties: {
+                summary: { type: Type.STRING },
+                experience: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            id: { type: Type.STRING },
+                            rewrittenDescription: { type: Type.STRING }
+                        }
+                    }
+                }
+            }
+        };
 
         const prompt = `MEU CURRÍCULO:\nResumo: ${data.personalInfo.summary}\nExperiências: ${JSON.stringify(data.experience.map(e => ({id: e.id, role: e.role, company: e.company, desc: e.description})))}\n\nDESCRIÇÃO DA VAGA:\n${jobDescription}`;
 
-        const response = await callLLM(prompt, system, true);
+        const response = await callLLM(prompt, system, true, schema);
         return JSON.parse(cleanJSON(response));
     } catch (e) {
         console.error("Tailor Error", e);
@@ -248,12 +315,20 @@ export const tailorResume = async (data: ResumeData, jobDescription: string): Pr
 export const analyzeGap = async (data: ResumeData, jobDescription: string): Promise<GapAnalysis | null> => {
     try {
         const system = `Analise o currículo do candidato em relação à vaga e identifique GAPS (lacunas).
-        Retorne APENAS JSON: { "missingHardSkills": ["..."], "missingSoftSkills": ["..."], "improvements": ["dica 1", "dica 2"] }
         Seja rigoroso mas construtivo.`;
+
+        const schema = {
+            type: Type.OBJECT,
+            properties: {
+                missingHardSkills: { type: Type.ARRAY, items: { type: Type.STRING } },
+                missingSoftSkills: { type: Type.ARRAY, items: { type: Type.STRING } },
+                improvements: { type: Type.ARRAY, items: { type: Type.STRING } }
+            }
+        };
 
         const prompt = `MEU PERFIL: ${data.personalInfo.jobTitle}. Skills: ${data.skills.map(s => s.name).join(', ')}. Resumo: ${data.personalInfo.summary}.\n\nVAGA ALVO:\n${jobDescription}`;
         
-        const response = await callLLM(prompt, system, true);
+        const response = await callLLM(prompt, system, true, schema);
         return JSON.parse(cleanJSON(response));
     } catch (e) {
         return null;
@@ -274,26 +349,45 @@ export const estimateSalary = async (data: ResumeData): Promise<string> => {
 
 export const analyzePhoto = async (base64Image: string): Promise<PhotoAnalysis | null> => {
     const config = getAIConfig();
-    
+    const apiKey = getEffectiveApiKey(config);
+    if (!apiKey) return null;
+
     // Remove header data if present (data:image/jpeg;base64,)
     const cleanBase64 = base64Image.split(',')[1] || base64Image;
 
     try {
         // Only Gemini supports vision natively in this setup for now
         if (config.provider === 'gemini') {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const model = ai.getGenerativeModel({ model: "gemini-2.0-flash-001" });
+            const ai = new GoogleGenAI({ apiKey: apiKey });
             
+            const schema = {
+                type: Type.OBJECT,
+                properties: {
+                    score: { type: Type.NUMBER },
+                    feedback: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    lighting: { type: Type.STRING, enum: ["good", "bad", "average"] },
+                    professionalism: { type: Type.STRING, enum: ["high", "medium", "low"] }
+                }
+            };
+
             const prompt = `Aja como um recrutador profissional. Analise esta foto de perfil para um currículo (LinkedIn/CV).
-            Critérios: Iluminação, Fundo, Expressão, Vestimenta.
-            Retorne APENAS JSON: { "score": 0-100, "feedback": ["dica 1", "dica 2"], "lighting": "good"|"average"|"bad", "professionalism": "high"|"medium"|"low" }`;
+            Critérios: Iluminação, Fundo, Expressão, Vestimenta.`;
             
-            const result = await model.generateContent([
-                prompt,
-                { inlineData: { data: cleanBase64, mimeType: "image/jpeg" } }
-            ]);
+            const response = await ai.models.generateContent({
+                model: config.model || "gemini-2.0-flash-001",
+                contents: {
+                    parts: [
+                        { text: prompt },
+                        { inlineData: { data: cleanBase64, mimeType: "image/jpeg" } }
+                    ]
+                },
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema
+                }
+            });
             
-            return JSON.parse(cleanJSON(result.response.text()));
+            return JSON.parse(cleanJSON(response.text || ""));
         } else {
              // Fallback text if using OpenRouter without vision capabilities configured
              return null;
@@ -308,9 +402,21 @@ export const analyzePhoto = async (base64Image: string): Promise<PhotoAnalysis |
 
 export const analyzeJobMatch = async (resumeInput: string | { mimeType: string, data: string }, jobDescription: string): Promise<any> => {
   const config = getAIConfig();
+  const apiKey = getEffectiveApiKey(config);
+  
+  if (!apiKey) throw new Error("API Key ausente.");
+
+  const schema = {
+      type: Type.OBJECT,
+      properties: {
+          score: { type: Type.NUMBER },
+          feedback: { type: Type.ARRAY, items: { type: Type.STRING } },
+          missingKeywords: { type: Type.ARRAY, items: { type: Type.STRING } }
+      }
+  };
   
   if (config.provider === 'gemini' && typeof resumeInput !== 'string') {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey: apiKey });
       
       try {
         const response = await ai.models.generateContent({
@@ -318,24 +424,24 @@ export const analyzeJobMatch = async (resumeInput: string | { mimeType: string, 
             contents: {
                 parts: [
                     { inlineData: { mimeType: resumeInput.mimeType, data: resumeInput.data } },
-                    { text: `DESCRIÇÃO DA VAGA:\n${jobDescription}\n\nAja como um ATS. Compare o currículo com a vaga. Retorne JSON: { "score": 0-100, "feedback": [], "missingKeywords": [] }` }
+                    { text: `DESCRIÇÃO DA VAGA:\n${jobDescription}\n\nAja como um ATS. Compare o currículo com a vaga.` }
                 ]
             },
-            config: { responseMimeType: "application/json" }
+            config: { 
+                responseMimeType: "application/json",
+                responseSchema: schema
+            }
         });
         return JSON.parse(cleanJSON(response.text || ""));
       } catch (e) { console.error(e); return null; }
   }
 
   // Fallback para OpenRouter ou Gemini Texto
-  
   let resumeTextContent = "";
   if (typeof resumeInput === 'string') {
       resumeTextContent = resumeInput;
   } else {
-      const system = `Aja como um sistema ATS. Compare o currículo (anexo) com a vaga.
-      Retorne APENAS JSON: { "score": (0-100), "feedback": ["..."], "missingKeywords": ["..."] }`;
-
+      // Basic logic to handle image if we fell here
       const prompt = [
           { type: "text", text: `VAGA:\n${jobDescription.substring(0, 5000)}` },
           {
@@ -345,22 +451,24 @@ export const analyzeJobMatch = async (resumeInput: string | { mimeType: string, 
               }
           }
       ];
+      // Note: callLLM handles OpenRouter structure for image_url
+      // We pass plain text instructions for schema in non-native schema providers
+      const system = `Aja como um sistema ATS. Compare o currículo (anexo) com a vaga.
+      Retorne APENAS JSON: { "score": (0-100), "feedback": ["..."], "missingKeywords": ["..."] }`;
 
       try {
           const response = await callLLM(prompt, system, true);
           return JSON.parse(cleanJSON(response));
       } catch (error) {
-          return { score: 0, feedback: ["Erro de visão computacional. Tente copiar o texto."], missingKeywords: [] };
+          return { score: 0, feedback: ["Erro de visão computacional."], missingKeywords: [] };
       }
   }
 
   try {
-      const system = `Aja como um sistema ATS. Compare o currículo com a vaga.
-      Retorne APENAS JSON: { "score": (0-100), "feedback": ["..."], "missingKeywords": ["..."] }`;
-      
+      const system = `Aja como um sistema ATS. Compare o currículo com a vaga.`;
       const prompt = `CURRÍCULO:\n${resumeTextContent.substring(0, 20000)}\n\nVAGA:\n${jobDescription.substring(0, 5000)}`;
       
-      const response = await callLLM(prompt, system, true);
+      const response = await callLLM(prompt, system, true, schema);
       return JSON.parse(cleanJSON(response));
   } catch (error) {
       return { score: 0, feedback: ["Erro na análise."], missingKeywords: [] };
@@ -369,6 +477,7 @@ export const analyzeJobMatch = async (resumeInput: string | { mimeType: string, 
 
 export const extractResumeFromPdf = async (fileData: { mimeType: string, data: string }): Promise<any> => {
     const config = getAIConfig();
+    const apiKey = getEffectiveApiKey(config);
 
     if (config.provider !== 'gemini') {
         alert("A extração de PDF requer o provedor Google Gemini nativo.");
@@ -376,18 +485,26 @@ export const extractResumeFromPdf = async (fileData: { mimeType: string, data: s
     }
 
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const prompt = `Extraia os dados do currículo para JSON: { personalInfo: {fullName, jobTitle, email, phone, address, linkedin, summary}, experience: [{role, company, startDate, endDate, description}], skills: [{name, level}] }. Traduza para PT-BR.`;
+        const ai = new GoogleGenAI({ apiKey: apiKey });
+        const prompt = `Extraia os dados do currículo para JSON. Traduza para PT-BR.`;
+        
+        // Complex schema for Resume Data extraction is recommended but large. 
+        // We will stick to prompt engineering with MIME type for this complex nested object 
+        // or define a simplified schema if needed. 
+        // For now, prompt + responseMimeType is often sufficient for PDF extraction.
         
         const response = await ai.models.generateContent({
-            model: config.model || DEFAULT_GEMINI_MODEL,
+            model: config.model || "gemini-2.0-flash-001",
             contents: {
                 parts: [
                     { inlineData: { mimeType: fileData.mimeType, data: fileData.data } },
                     { text: prompt }
                 ]
             },
-            config: { responseMimeType: "application/json" }
+            config: { 
+                responseMimeType: "application/json",
+                // Defining full schema for ResumeData is verbose, letting model infer structure from prompt context often works well for large docs
+            }
         });
         return JSON.parse(cleanJSON(response.text || ""));
     } catch (e) {
