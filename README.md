@@ -1,75 +1,88 @@
+
 # Trampo-lin 🚀
 
-**O Trampo-lin, um salto na carreira.**
+**O Trampo-lin: Um salto na sua carreira.**
 
-Um criador de currículos moderno, gratuito e open-source, construído com React e impulsionado pela Inteligência Artificial do Google Gemini.
+O Trampo-lin é uma plataforma completa e moderna para construção de currículos e gestão de candidaturas, construída com React e potencializada pela IA do Google Gemini.
 
-## ✨ Funcionalidades
+Desenvolvido para ser intuitivo, bonito e poderoso, ele vai muito além de um simples editor de PDF.
 
-- **Edição em Tempo Real:** Veja as alterações no currículo instantaneamente enquanto edita.
-- **Inteligência Artificial (Gemini):**
-  - ✨ **Melhoria de Texto:** Reescreve frases para soarem mais profissionais.
-  - 📝 **Resumo Automático:** Gera um perfil profissional com base na sua experiência.
-  - 🌐 **Tradução:** Traduz todo o currículo para Inglês ou Espanhol com um clique.
-  - 🎯 **Sugestão de Skills:** Sugere habilidades baseadas no seu cargo.
-  - 🔍 **Analisador ATS:** Compara seu currículo com uma descrição de vaga e dá dicas.
-  - ✉️ **Gerador de Carta de Apresentação:** Cria cartas personalizadas para vagas específicas.
-- **Múltiplos Temas:** Diversos layouts (Moderno, Clássico, Criativo, ATS-Friendly, etc.).
-- **Privacidade Total:** Seus dados são salvos apenas no navegador (LocalStorage). Nada vai para servidores externos (exceto o texto enviado para a IA processar).
-- **Exportação:** PDF (via impressão do navegador) e TXT.
-- **Modo Escuro:** Suporte a Dark Mode.
+![Preview](https://i.imgur.com/example-preview.png)
 
-## 🛠️ Tecnologias
+## ✨ Funcionalidades Principais
 
-- **Frontend:** React, TypeScript, Vite
-- **Estilização:** Tailwind CSS, Lucide React (Ícones)
-- **IA:** Google Gemini API (`@google/genai`)
-- **Utilitários:** `date-fns` (Datas)
+### 📝 Editor de Currículos Inteligente
+*   **Edição em Tempo Real:** Veja as alterações instantaneamente.
+*   **Assistente de IA (Gemini):**
+    *   ✨ Melhora textos e descrições.
+    *   🎯 Gera resumos profissionais de alto impacto.
+    *   📋 Cria bullet points orientados a resultados.
+    *   🔄 Traduz o currículo inteiro para Inglês ou Espanhol.
+    *   🕵️‍♂️ Analisa sua foto de perfil com visão computacional.
+*   **Múltiplos Temas:** Layouts modernos, clássicos, criativos e ATS-Friendly.
+*   **Customização Total:** Fontes, cores, espaçamento e ordem das seções.
 
-## 🚀 Como fazer Deploy (Netlify)
+### 💼 Gestão de Vagas (Job Tracker)
+*   **Quadro Kanban:** Organize suas candidaturas por colunas (Interesse, Aplicado, Entrevista, Oferta, Recusado).
+*   **Arrastar e Soltar:** Mova cards facilmente entre as etapas.
+*   **Histórico:** Veja há quanto tempo você aplicou para cada vaga.
 
-A maneira mais fácil de publicar este projeto é usando o **Netlify**.
+### 🔗 Gerador de Perfil LinkedIn
+*   **Headlines Otimizadas:** A IA cria títulos chamativos para seu perfil.
+*   **Bio Narrativa (About):** Gera textos engajadores em formato de storytelling.
+*   **Experiência Social:** Converte descrições técnicas de CV em posts de conquistas.
 
-1. Faça um **Fork** ou clone este repositório para o seu GitHub.
-2. Acesse [Netlify](https://www.netlify.com/) e faça login.
-3. Clique em **"Add new site"** > **"Import from an existing project"**.
-4. Selecione **GitHub** e escolha o repositório do `trampo-lin`.
-5. As configurações de build devem ser preenchidas automaticamente:
-   - **Build command:** `npm run build`
-   - **Publish directory:** `dist`
-6. **IMPORTANTE:** Clique em **"Site settings"** > **"Environment variables"** e adicione:
-   - Key: `API_KEY`
-   - Value: `Sua_Chave_Google_Gemini`
-   - [Obter chave gratuita aqui](https://aistudio.google.com/app/apikey)
-7. Clique em **Deploy site**.
+### 🛠️ Ferramentas Extras
+*   **Simulador de Entrevista:** Gera perguntas técnicas e comportamentais baseadas no seu perfil.
+*   **Estimativa Salarial:** Analisa seu cargo e experiência para estimar uma faixa salarial.
+*   **Análise de Gaps:** Compara seu CV com uma vaga real e diz o que falta.
+*   **Gerador de Carta de Apresentação:** Cria cartas personalizadas para cada aplicação.
 
-## 💻 Como rodar localmente
+## 🚀 Tecnologias
 
-Se quiser editar o código na sua máquina:
+*   **Frontend:** React 18, TypeScript, Vite
+*   **Estilização:** Tailwind CSS (com plugins de animação e tipografia)
+*   **Ícones:** Lucide React
+*   **IA:** Google Generative AI SDK (Gemini)
+*   **Data:** date-fns
 
-1. **Clone o repositório:**
-   ```bash
-   git clone https://github.com/SEU_USUARIO/trampo-lin.git
-   cd trampo-lin
-   ```
+## 📦 Instalação e Uso Local
 
-2. **Instale as dependências:**
-   ```bash
-   npm install
-   ```
+1.  **Clone o repositório:**
+    ```bash
+    git clone https://github.com/SEU_USUARIO/trampo-lin.git
+    cd trampo-lin
+    ```
 
-3. **Configure a API Key:**
-   - Crie um arquivo `.env` na raiz do projeto.
-   - Adicione sua chave:
-     ```env
-     API_KEY=Sua_Chave_Gemini_Aqui
-     ```
+2.  **Instale as dependências:**
+    ```bash
+    npm install
+    ```
 
-4. **Rode o projeto:**
-   ```bash
-   npm run dev
-   ```
+3.  **Configuração da API Key (Opcional para Dev):**
+    *   Você pode criar um arquivo `.env` na raiz: `API_KEY=Sua_Chave_Gemini`
+    *   Ou inserir a chave diretamente nas configurações do app (ícone de robô).
+
+4.  **Rode o projeto:**
+    ```bash
+    npm run dev
+    ```
+
+## ☁️ Deploy (Netlify/Vercel)
+
+Este projeto está pronto para deploy.
+
+1.  Importe o repositório na sua plataforma preferida.
+2.  Configure a variável de ambiente `API_KEY` com sua chave do Google AI Studio (opcional, pois o usuário pode inserir a dele).
+3.  Comando de build: `npm run build`.
+4.  Diretório de saída: `dist`.
+
+## 🔒 Privacidade
+
+O Trampo-lin funciona **100% no navegador (Client-side)**.
+*   Seus dados pessoais e currículos são salvos no `LocalStorage`.
+*   Nenhum dado é enviado para servidores externos, exceto o texto estritamente necessário para o processamento da IA do Google Gemini quando você clica nos botões de gerar.
 
 ## 📄 Licença
 
-Este projeto é de uso livre para fins pessoais e educacionais.
+Este projeto é open-source e gratuito para uso pessoal.

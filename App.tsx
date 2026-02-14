@@ -1,11 +1,12 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Editor } from './components/Editor/Editor';
 import { Preview } from './components/Preview/Preview';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { ResumeData, ThemeId, AIConfig } from './types';
 import { INITIAL_RESUME, THEMES } from './constants';
-import { getAIConfig, saveAIConfig } from './services/geminiService';
-import { Printer, Download, Upload, RotateCcw, Palette, Layout, Moon, Sun, Save, FileText, ZoomIn, ZoomOut, UserPlus, Menu, Eye, EyeOff, FileType, Bot, Settings2, Check, X, AlertCircle, Monitor, ChevronRight, Maximize, Briefcase, Key, Linkedin, Minimize2, Edit2 } from 'lucide-react';
+import { getAIConfig, saveAIConfig, validateConnection } from './services/geminiService';
+import { Printer, Download, Upload, RotateCcw, Palette, Layout, Moon, Sun, Save, FileText, ZoomIn, ZoomOut, UserPlus, Menu, Eye, EyeOff, FileType, Bot, Settings2, Check, X, AlertCircle, Monitor, ChevronRight, Maximize, Briefcase, Key, Linkedin, Minimize2, Edit2, Loader2, RefreshCw } from 'lucide-react';
 import { JobTracker } from './components/JobTracker/JobTracker';
 import { LinkedinProfileGenerator } from './components/Linkedin/LinkedinProfileGenerator';
 import { Onboarding } from './components/Onboarding/Onboarding';
@@ -35,6 +36,7 @@ const App: React.FC = () => {
   // AI Settings State
   const [showAISettings, setShowAISettings] = useState(false);
   const [aiConfig, setAiConfig] = useState<AIConfig>(getAIConfig());
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
   const hasEnvKey = !!process.env.API_KEY && process.env.API_KEY.length > 0;
 
   // Confirm Dialog State
@@ -210,6 +212,17 @@ const App: React.FC = () => {
       setToastMessage("Configurações de IA salvas!");
   };
 
+  const handleTestConnection = async () => {
+      setIsTestingConnection(true);
+      const success = await validateConnection(aiConfig);
+      setIsTestingConnection(false);
+      if (success) {
+          setToastMessage("✅ Conexão bem-sucedida!");
+      } else {
+          setToastMessage("❌ Falha na conexão. Verifique sua chave.");
+      }
+  };
+
   const handleAutoFit = () => {
       if (!previewContainerRef.current) return;
       const containerWidth = previewContainerRef.current.clientWidth - 48;
@@ -339,7 +352,10 @@ const App: React.FC = () => {
                                <input type="text" value={aiConfig.model} onChange={(e) => setAiConfig({...aiConfig, model: e.target.value})} placeholder={aiConfig.provider === 'gemini' ? "gemini-3-flash-preview" : "google/gemini-2.0-flash-001"} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-trampo-500 outline-none dark:text-white transition-all ring-offset-1 dark:ring-offset-slate-900" />
                             </div>
                          </div>
-                         <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                         <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
+                            <button onClick={handleTestConnection} disabled={isTestingConnection} className="px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-bold transition-all active:scale-95 flex items-center gap-2 hover:bg-slate-200 dark:hover:bg-slate-700">
+                                {isTestingConnection ? <Loader2 size={16} className="animate-spin"/> : <RefreshCw size={16}/>} Testar Conexão
+                            </button>
                             <button onClick={handleSaveAIConfig} className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-4 py-2 rounded-lg text-sm font-bold shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center gap-2"><Check size={16}/> Salvar</button>
                          </div>
                       </div>
