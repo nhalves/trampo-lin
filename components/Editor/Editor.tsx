@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ResumeData, ResumeSettings } from '../../types';
-import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Wand2, Eye, EyeOff, ArrowUp, ArrowDown, Settings, Briefcase, GraduationCap, Medal, Code, User, Languages, FileText, Search, QrCode, Heart, Award, Users, FilePlus, Copy, Eraser, Languages as LangIcon, Upload, X, Type, Undo2, Redo2, Download, RefreshCw, Star, Globe, PenTool, CheckCircle2, AlertCircle, FileUp, Calendar, Link2, Mail, Phone, MapPin, FileJson, Twitter, Dribbble, Hash, Bold, Italic, List, Linkedin, BookOpen, Feather, Zap, Smile, Book, Timer, MessageSquare, Briefcase as BriefcaseIcon, LayoutGrid, GripVertical, Target, Maximize2, Minimize2, Camera, DollarSign, Mic, MicOff, Palette, Github, Check } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Wand2, Eye, EyeOff, ArrowUp, ArrowDown, Settings, Briefcase, GraduationCap, Medal, Code, User, Languages, FileText, Search, QrCode, Heart, Award, Users, FilePlus, Copy, Eraser, Languages as LangIcon, Upload, X, Type, Undo2, Redo2, Download, RefreshCw, Star, Globe, PenTool, CheckCircle2, AlertCircle, FileUp, Calendar, Link2, Mail, Phone, MapPin, FileJson, Twitter, Dribbble, Hash, Bold, Italic, List, Linkedin, BookOpen, Feather, Zap, Smile, Book, Timer, MessageSquare, Briefcase as BriefcaseIcon, LayoutGrid, GripVertical, Target, Maximize2, Minimize2, Camera, DollarSign, Mic, MicOff, Palette, Github, Check, AlertTriangle } from 'lucide-react';
 import { improveText, generateSummary, suggestSkills, generateCoverLetter, analyzeJobMatch, translateText, generateBulletPoints, extractResumeFromPdf, generateInterviewQuestions, generateLinkedinHeadline, tailorResume, analyzeGap, estimateSalary, analyzePhoto } from '../../services/geminiService';
 import { fetchGithubRepos, extractDominantColor } from '../../services/integrationService';
 import { AVAILABLE_FONTS, INITIAL_RESUME, FONT_PAIRINGS, EXAMPLE_PERSONAS } from '../../constants';
@@ -21,18 +21,6 @@ const COLOR_PRESETS = [
   '#be123c', '#7c3aed', '#4b5563', '#a855f7', '#ec4899', '#f43f5e'
 ];
 
-const CUSTOM_ICONS = [
-  { id: 'star', icon: Star, label: 'Estrela' },
-  { id: 'globe', icon: Globe, label: 'Globo' },
-  { id: 'code', icon: Code, label: 'Código' },
-  { id: 'heart', icon: Heart, label: 'Coração' },
-  { id: 'pen', icon: PenTool, label: 'Caneta' },
-  { id: 'award', icon: Award, label: 'Prêmio' },
-  { id: 'zap', icon: Zap, label: 'Raio' },
-  { id: 'feather', icon: Feather, label: 'Pena' },
-  { id: 'book', icon: BookOpen, label: 'Livro' }
-];
-
 const handleDateInput = (value: string) => {
     let v = value.replace(/\D/g, '').slice(0, 6);
     if (v.length >= 3) { return `${v.slice(0, 2)}/${v.slice(2)}`; }
@@ -40,6 +28,34 @@ const handleDateInput = (value: string) => {
 };
 
 const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+// --- COMPRESS IMAGE UTILITY ---
+const compressImage = (file: File, maxWidth = 300, quality = 0.8): Promise<string> => {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target?.result as string;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+        };
+    });
+};
 
 const DebouncedInput = ({ label, value, onChange, type = "text", placeholder = "", step, disabled, icon: Icon, isDate, className }: any) => {
     const [localValue, setLocalValue] = useState(value);
@@ -183,6 +199,7 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
+  const atsPdfInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (history.length === 0) { setHistory([data]); setHistoryIndex(0); }
@@ -238,17 +255,19 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
   const readingTime = Math.ceil(wordCount / 200);
 
   const toggleVisibility = (section: string) => { const visibleSections = { ...data.settings.visibleSections }; visibleSections[section] = !visibleSections[section]; updateSettings('visibleSections', visibleSections); };
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { onShowToast("Erro: Imagem maior que 2MB."); return; }
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const photoUrl = reader.result as string;
-        try { const dominantColor = await extractDominantColor(photoUrl); if (dominantColor) { onRequestConfirm("Cor Detectada", "Aplicar cor predominante da foto?", () => updateSettings('primaryColor', dominantColor), 'info'); } } catch(e) {}
-        handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, photoUrl } });
-      };
-      reader.readAsDataURL(file);
+      // FIX: Compress image to avoid localStorage quota exceeded error
+      try {
+          const compressedBase64 = await compressImage(file, 300, 0.8);
+          try { const dominantColor = await extractDominantColor(compressedBase64); if (dominantColor) { onRequestConfirm("Cor Detectada", "Aplicar cor predominante da foto?", () => updateSettings('primaryColor', dominantColor), 'info'); } } catch(e) {}
+          handleChangeWithHistory({ ...data, personalInfo: { ...data.personalInfo, photoUrl: compressedBase64 } });
+          onShowToast("Foto carregada e otimizada!");
+      } catch (err) {
+          onShowToast("Erro ao processar imagem.");
+      }
     }
   };
 
@@ -258,6 +277,21 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
   const handleJsonExport = () => { const dataStr = JSON.stringify(data, null, 2); const blob = new Blob([dataStr], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `backup-trampolin-${data.personalInfo.fullName.replace(/\s+/g, '-').toLowerCase()}.json`; a.click(); };
   const handleReset = () => { onRequestConfirm("Resetar Currículo?", "Isso apagará TODOS os dados atuais.", () => { handleChangeWithHistory(INITIAL_RESUME); onShowToast("Reiniciado."); }, 'danger'); };
   const loadExample = (example: ResumeData) => { onRequestConfirm("Carregar Exemplo?", "Seus dados atuais serão perdidos.", () => { handleChangeWithHistory(example); onShowToast("Exemplo carregado!"); setShowExamples(false); }, 'info'); };
+
+  const handleAtsPdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+          if (file.type !== 'application/pdf') { onShowToast("Por favor, envie apenas PDF."); return; }
+          const reader = new FileReader();
+          reader.onloadend = () => {
+             const result = reader.result as string;
+             const base64 = result.split(',')[1];
+             setAtsFile({ name: file.name, data: base64, mimeType: file.type });
+             onShowToast("PDF anexado com sucesso!");
+          };
+          reader.readAsDataURL(file);
+      }
+  };
 
   const handleImproveText = async (text: string, path: (val: string) => void, action: 'grammar' | 'shorter' | 'longer' = 'grammar') => {
     if (!text || text.length < 5) { onShowToast("Texto muito curto."); return; }
@@ -282,6 +316,31 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
   const handleEstimateSalary = async () => { setLoadingAI('salary'); const result = await estimateSalary(data); setEstimatedSalary(result); setLoadingAI(null); };
   const handleTranslate = async (lang: string) => { onRequestConfirm(`Traduzir para ${lang}?`, "A IA irá traduzir tudo.", async () => { setLoadingAI('translating'); const newData = { ...data }; if (newData.personalInfo.summary) newData.personalInfo.summary = await translateText(newData.personalInfo.summary, lang); for (const exp of newData.experience) { if (exp.role) exp.role = await translateText(exp.role, lang); if (exp.description) exp.description = await translateText(exp.description, lang); } handleChangeWithHistory(newData); setLoadingAI(null); onShowToast("Traduzido!"); }, 'info'); };
   
+  const handleConvertToEditor = async () => {
+      if (!atsFile) return;
+      onRequestConfirm("Converter PDF?", "Isso irá sobrescrever os dados atuais.", async () => {
+            setLoadingAI('convert-pdf');
+            const extractedData = await extractResumeFromPdf(atsFile);
+            if (extractedData) {
+                handleChangeWithHistory({ ...INITIAL_RESUME, personalInfo: { ...INITIAL_RESUME.personalInfo, ...extractedData.personalInfo }, experience: extractedData.experience || [], education: extractedData.education || [], skills: extractedData.skills || [], languages: extractedData.languages || [] });
+                onShowToast("Currículo convertido!");
+                setActiveTab('resume');
+            } else { onShowToast("Erro ao converter."); }
+            setLoadingAI(null);
+        }, 'danger'
+      );
+  };
+
+  const handleRunAtsAnalysis = async () => {
+      if (!jobDescription) { onShowToast("Cole a descrição da vaga."); return; }
+      setLoadingAI('ats');
+      let input: any = JSON.stringify(data);
+      if (atsFile) { input = { mimeType: atsFile.mimeType, data: atsFile.data }; }
+      const result = await analyzeJobMatch(input, jobDescription);
+      setAtsResult(result);
+      setLoadingAI(null);
+  };
+
   const handleListChange = (listName: string, index: number, field: string, value: any) => { const list = [...(data as any)[listName]]; list[index] = { ...list[index], [field]: value }; handleChangeWithHistory({ ...data, [listName]: list }); };
   const addItem = (listName: string, item: any) => { handleChangeWithHistory({ ...data, [listName]: [item, ...(data as any)[listName]] }); onShowToast("Item adicionado."); };
   const removeItem = (listName: string, index: number) => { onRequestConfirm("Remover?", "Deseja remover este item?", () => { const list = [...(data as any)[listName]]; handleChangeWithHistory({ ...data, [listName]: list.filter((_, i) => i !== index) }); }, 'danger'); };
@@ -482,8 +541,6 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                 </div>
              </Section>
 
-             {/* Outras Seções Simplificadas para Brevidade XML */}
-             {/* ... */}
              <Section title="Configurações & Visual" icon={Settings} isOpen={openSection === 'settings'} onToggle={() => toggleSection('settings')}>
                <div className="space-y-5">
                  <div className="grid grid-cols-2 gap-3">
@@ -513,7 +570,134 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
              </Section>
           </div>
         )}
-        {/* Other Tabs content would go here, simplified for this specific file update request to fit size limits */}
+
+        {/* --- TOOLS TAB --- */}
+        {activeTab === 'tools' && (
+            <div className="space-y-6 pb-20 animate-slide-in">
+                <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-100 dark:border-amber-900/30">
+                    <h3 className="font-bold text-amber-900 dark:text-amber-300 flex items-center gap-2 mb-2"><Zap size={20}/> Ferramentas Extras</h3>
+                    <p className="text-xs text-amber-700 dark:text-amber-400">Recursos poderosos para impulsionar sua candidatura.</p>
+                </div>
+
+                <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl">
+                     <h4 className="font-bold text-sm mb-2 flex items-center gap-2 text-slate-700 dark:text-slate-200"><DollarSign size={16}/> Estimativa de Salário</h4>
+                     <p className="text-xs text-slate-500 mb-4">Com base no seu perfil, veja uma estimativa de mercado.</p>
+                     <button onClick={handleEstimateSalary} disabled={!!loadingAI} className="w-full py-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg text-xs font-bold hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors active:scale-95">
+                         {loadingAI === 'salary' ? 'Calculando...' : 'Calcular Estimativa'}
+                     </button>
+                     {estimatedSalary && <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg text-sm text-green-800 dark:text-green-200 font-bold border border-green-200 dark:border-green-800 text-center animate-fade-in">{estimatedSalary}</div>}
+                </div>
+
+                <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl">
+                     <h4 className="font-bold text-sm mb-2 flex items-center gap-2 text-slate-700 dark:text-slate-200"><Target size={16}/> Análise de Gaps</h4>
+                     <p className="text-xs text-slate-500 mb-4">Descubra o que falta para a vaga dos sonhos.</p>
+                     <button onClick={() => setShowGapModal(true)} className="w-full py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors active:scale-95">Identificar Gaps</button>
+                </div>
+
+                <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl">
+                     <h4 className="font-bold text-sm mb-2 flex items-center gap-2 text-slate-700 dark:text-slate-200"><MessageSquare size={16}/> Simulador de Entrevista</h4>
+                     <button onClick={handleAIInterview} disabled={!!loadingAI} className="w-full py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors active:scale-95">
+                         {loadingAI === 'interview' ? 'Gerando...' : 'Gerar Perguntas'}
+                     </button>
+                     {interviewQs && (
+                         <div className="mt-4 space-y-4 animate-fade-in">
+                             {interviewQs.technical?.length > 0 && <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700"><h5 className="text-[10px] uppercase font-bold text-slate-400 mb-2">Técnicas</h5><ul className="list-disc list-inside text-xs text-slate-700 dark:text-slate-300 space-y-1.5">{interviewQs.technical.map((q, i) => <li key={i}>{q}</li>)}</ul></div>}
+                             {interviewQs.behavioral?.length > 0 && <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700"><h5 className="text-[10px] uppercase font-bold text-slate-400 mb-2">Comportamentais</h5><ul className="list-disc list-inside text-xs text-slate-700 dark:text-slate-300 space-y-1.5">{interviewQs.behavioral.map((q, i) => <li key={i}>{q}</li>)}</ul></div>}
+                         </div>
+                     )}
+                </div>
+            </div>
+        )}
+
+        {/* --- COVER LETTER TAB --- */}
+        {activeTab === 'cover' && (
+            <div className="space-y-6 pb-20 animate-slide-in">
+                <div className="bg-purple-50 dark:bg-purple-900/10 p-4 rounded-xl border border-purple-100 dark:border-purple-900/30">
+                    <h3 className="font-bold text-purple-900 dark:text-purple-300 flex items-center gap-2 mb-2"><Wand2 size={20}/> Carta de Apresentação</h3>
+                    <p className="text-xs text-purple-700 dark:text-purple-400">Gere uma carta personalizada para cada vaga.</p>
+                </div>
+                <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-700 rounded-xl space-y-4">
+                    <DebouncedInput label="Nome do Recrutador (Opcional)" value={data.coverLetter.recipientName} onChange={(v: string) => handleChangeWithHistory({...data, coverLetter: {...data.coverLetter, recipientName: v}})} placeholder="Ex: João Silva" />
+                    <DebouncedInput label="Nome da Empresa" value={data.coverLetter.companyName} onChange={(v: string) => handleChangeWithHistory({...data, coverLetter: {...data.coverLetter, companyName: v}})} placeholder="Ex: Google" />
+                    <DebouncedInput label="Vaga Alvo" value={data.coverLetter.jobTitle} onChange={(v: string) => handleChangeWithHistory({...data, coverLetter: {...data.coverLetter, jobTitle: v}})} placeholder="Ex: Senior Frontend Developer" />
+                    <button onClick={handleAICoverLetter} disabled={!!loadingAI} className="w-full py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 active:scale-95 transition-all shadow-md shadow-purple-500/20 flex items-center justify-center gap-2">
+                        {loadingAI === 'cover-letter' ? 'Escrevendo...' : <><Sparkles size={16}/> Gerar com IA</>}
+                    </button>
+                </div>
+                <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-700 rounded-xl">
+                    <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Conteúdo da Carta</label>
+                    <DebouncedTextarea value={data.coverLetter.content} onChange={(e: any) => handleChangeWithHistory({...data, coverLetter: {...data.coverLetter, content: e.target.value}})} className="w-full h-96 p-4 border border-slate-200 dark:border-slate-700 rounded-xl text-sm leading-relaxed dark:bg-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-purple-500/20 outline-none" placeholder="O conteúdo gerado aparecerá aqui..." />
+                </div>
+            </div>
+        )}
+
+        {/* --- ATS TAB --- */}
+        {activeTab === 'ats' && (
+            <div className="space-y-6 pb-20 animate-slide-in">
+                <div className="bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+                    <h3 className="font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-2 mb-2"><Search size={20}/> Verificador ATS</h3>
+                    <p className="text-xs text-emerald-700 dark:text-emerald-400">Verifique se seu currículo passa nos robôs de recrutamento.</p>
+                </div>
+
+                <div className="bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-700 rounded-xl">
+                    <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">1. Escolha a Fonte</label>
+                    <div className="flex gap-2 mb-4">
+                        <button onClick={() => setAtsFile(null)} className={`flex-1 py-2 text-xs font-bold rounded-lg border transition-all ${!atsFile ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>Usar Editor Atual</button>
+                        <button onClick={() => atsPdfInputRef.current?.click()} className={`flex-1 py-2 text-xs font-bold rounded-lg border transition-all ${atsFile ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>Upload PDF</button>
+                        <input type="file" ref={atsPdfInputRef} onChange={handleAtsPdfUpload} accept="application/pdf" className="hidden" />
+                    </div>
+                    {atsFile && (
+                        <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs font-medium mb-4">
+                            <span className="truncate max-w-[200px]">{atsFile.name}</span>
+                            <div className="flex gap-2">
+                                <button onClick={handleConvertToEditor} className="text-blue-600 hover:text-blue-700 font-bold" title="Importar dados para o editor">Importar</button>
+                                <button onClick={() => setAtsFile(null)} className="text-red-500 hover:text-red-600"><X size={14}/></button>
+                            </div>
+                        </div>
+                    )}
+
+                    <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">2. Descrição da Vaga</label>
+                    <textarea value={jobDescription} onChange={(e) => setJobDescription(e.target.value)} className="w-full h-32 p-3 border border-slate-200 dark:border-slate-700 rounded-lg text-sm mb-4 focus:ring-2 focus:ring-emerald-500/20 outline-none dark:bg-slate-800 dark:text-white" placeholder="Cole a descrição da vaga aqui..." />
+                    
+                    <button onClick={handleRunAtsAnalysis} disabled={!jobDescription || !!loadingAI} className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+                        {loadingAI === 'ats' ? 'Analisando...' : <><Search size={18}/> Analisar Match</>}
+                    </button>
+                </div>
+
+                {atsResult && (
+                    <div className="bg-white dark:bg-slate-900 p-6 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm animate-fade-in">
+                        <div className="flex items-center justify-between mb-6">
+                            <h4 className="font-bold text-lg dark:text-white">Resultado da Análise</h4>
+                            <div className={`text-2xl font-black ${atsResult.score >= 70 ? 'text-emerald-500' : atsResult.score >= 40 ? 'text-amber-500' : 'text-red-500'}`}>{atsResult.score}%</div>
+                        </div>
+                        
+                        <div className="space-y-6">
+                            <div>
+                                <h5 className="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><AlertTriangle size={12}/> Palavras-chave Faltantes</h5>
+                                <div className="flex flex-wrap gap-2">
+                                    {atsResult.missingKeywords.map((k: string, i: number) => (
+                                        <span key={i} className="px-2 py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs rounded border border-red-100 dark:border-red-900/50 font-medium">{k}</span>
+                                    ))}
+                                    {atsResult.missingKeywords.length === 0 && <span className="text-xs text-green-500 font-medium">Nenhuma palavra importante faltando!</span>}
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h5 className="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><CheckCircle2 size={12}/> Feedback</h5>
+                                <ul className="space-y-2">
+                                    {atsResult.feedback.map((f: string, i: number) => (
+                                        <li key={i} className="text-sm text-slate-600 dark:text-slate-300 flex gap-2 items-start">
+                                            <span className="mt-1.5 w-1 h-1 rounded-full bg-slate-400 flex-shrink-0"></span>
+                                            {f}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        )}
       </div>
       
       {showTailorModal && (
@@ -525,6 +709,40 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                   </div>
                   <div className="p-4 flex-1 overflow-auto"><textarea value={tailorJobDesc} onChange={(e) => setTailorJobDesc(e.target.value)} className="w-full h-48 p-3 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-trampo-500/20 dark:bg-slate-800 dark:text-white resize-none" placeholder="Cole aqui a descrição da vaga..."/></div>
                   <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3"><button onClick={() => setShowTailorModal(false)} className="px-4 py-2 text-sm text-slate-500">Cancelar</button><button onClick={handleTailorResume} disabled={!tailorJobDesc || !!loadingAI} className="px-5 py-2 bg-trampo-600 hover:bg-trampo-700 text-white rounded-lg font-bold text-sm shadow-lg active:scale-95 flex items-center gap-2">{loadingAI ? '...' : 'Adaptar'} <Wand2 size={16}/></button></div>
+              </div>
+          </div>
+      )}
+
+      {showGapModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-scale-in">
+                  <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                      <h3 className="font-bold text-lg dark:text-white flex items-center gap-2"><Target size={20}/> Análise de Gaps</h3>
+                      <button onClick={() => {setShowGapModal(false); setGapAnalysis(null);}} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500"><X size={20}/></button>
+                  </div>
+                  
+                  {!gapAnalysis ? (
+                    <div className="p-4">
+                        <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Descrição da Vaga</label>
+                        <textarea value={gapJobDesc} onChange={(e) => setGapJobDesc(e.target.value)} className="w-full h-40 p-3 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-trampo-500/20 dark:bg-slate-800 dark:text-white resize-none" placeholder="Cole a vaga para descobrir o que falta..." />
+                        <button onClick={handleGapAnalysis} disabled={!gapJobDesc || !!loadingAI} className="mt-4 w-full py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg font-bold text-sm active:scale-95 transition-transform">{loadingAI === 'gap' ? 'Analisando...' : 'Identificar Gaps'}</button>
+                    </div>
+                  ) : (
+                    <div className="p-4 flex-1 overflow-auto custom-scrollbar space-y-4">
+                        <div className="bg-red-50 dark:bg-red-900/10 p-3 rounded-xl border border-red-100 dark:border-red-900/30">
+                            <h4 className="font-bold text-red-800 dark:text-red-300 text-sm mb-2 flex items-center gap-2"><AlertCircle size={16}/> Hard Skills Faltantes</h4>
+                            <ul className="list-disc list-inside text-xs text-red-700 dark:text-red-400 space-y-1">{gapAnalysis.missingHardSkills.map((s: string, i: number) => <li key={i}>{s}</li>)}</ul>
+                        </div>
+                        <div className="bg-orange-50 dark:bg-orange-900/10 p-3 rounded-xl border border-orange-100 dark:border-orange-900/30">
+                            <h4 className="font-bold text-orange-800 dark:text-orange-300 text-sm mb-2 flex items-center gap-2"><Users size={16}/> Soft Skills Faltantes</h4>
+                            <ul className="list-disc list-inside text-xs text-orange-700 dark:text-orange-400 space-y-1">{gapAnalysis.missingSoftSkills.map((s: string, i: number) => <li key={i}>{s}</li>)}</ul>
+                        </div>
+                        <div className="bg-green-50 dark:bg-green-900/10 p-3 rounded-xl border border-green-100 dark:border-green-900/30">
+                            <h4 className="font-bold text-green-800 dark:text-green-300 text-sm mb-2 flex items-center gap-2"><CheckCircle2 size={16}/> Sugestões</h4>
+                            <ul className="list-disc list-inside text-xs text-green-700 dark:text-green-400 space-y-1">{gapAnalysis.improvements.map((s: string, i: number) => <li key={i}>{s}</li>)}</ul>
+                        </div>
+                    </div>
+                  )}
               </div>
           </div>
       )}

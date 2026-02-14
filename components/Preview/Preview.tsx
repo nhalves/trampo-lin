@@ -60,12 +60,20 @@ const MarkdownText = ({ text, className }: { text: string, className?: string })
 const DateDisplay = ({ date, formatStr, className }: { date: string, formatStr?: string, className?: string }) => {
   if (!date) return null;
   let display = date;
+  
+  // FIX: Robust Date Handling to prevent "Invalid Date"
   try {
      if (typeof date === 'string') {
+        // If it's a simple text like "Presente" or "Atual", just return it
+        if (date.length > 10 || isNaN(Date.parse(date)) && !date.match(/\d/)) {
+            return <span className={`capitalize tabular-nums ${className}`}>{date}</span>;
+        }
+
         let d: Date | null = null;
         if (date.match(/^\d{4}-\d{2}$/)) { const [y, m] = date.split('-').map(Number); d = new Date(y, m - 1); }
         else if (date.match(/^\d{2}\/\d{4}$/)) { const [m, y] = date.split('/').map(Number); d = new Date(y, m - 1); }
         else if (date.match(/^\d{4}$/)) { d = new Date(Number(date), 0); }
+        
         if (d && !isNaN(d.getTime())) {
              const locale = 'pt-BR';
              if (formatStr === 'yyyy') display = d.getFullYear().toString();
@@ -74,7 +82,10 @@ const DateDisplay = ({ date, formatStr, className }: { date: string, formatStr?:
              else display = new Intl.DateTimeFormat(locale, { month: 'short', year: 'numeric' }).format(d).replace('.', '');
         }
      }
-  } catch (e) {}
+  } catch (e) {
+      // Fallback to original string if parsing fails entirely
+      display = date;
+  }
   return <span className={`capitalize tabular-nums ${className}`}>{display}</span>;
 };
 

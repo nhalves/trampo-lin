@@ -145,24 +145,31 @@ const callLLM = async (
 
 const cleanJSON = (text: string): string => {
   if (!text) return "{}";
+  // Remove markdown code blocks
   let cleaned = text.replace(/```json\n?|```/g, '').trim();
+  
+  // Find the first valid JSON start
   const firstBrace = cleaned.indexOf('{');
-  const lastBrace = cleaned.lastIndexOf('}');
   const firstBracket = cleaned.indexOf('[');
+  
+  // Find the last valid JSON end
+  const lastBrace = cleaned.lastIndexOf('}');
   const lastBracket = cleaned.lastIndexOf(']');
 
-  if (firstBrace >= 0 && lastBrace > firstBrace) {
-      if (firstBracket >= 0 && firstBracket < firstBrace && lastBracket > lastBrace) {
-          return cleaned.substring(firstBracket, lastBracket + 1);
-      }
-      return cleaned.substring(firstBrace, lastBrace + 1);
+  if (firstBrace === -1 && firstBracket === -1) return cleaned; // Probably not JSON
+
+  let startIndex = 0;
+  let endIndex = cleaned.length;
+
+  if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+      startIndex = firstBrace;
+      endIndex = lastBrace + 1;
+  } else if (firstBracket !== -1) {
+      startIndex = firstBracket;
+      endIndex = lastBracket + 1;
   }
-  
-  if (firstBracket >= 0 && lastBracket > firstBracket) {
-      return cleaned.substring(firstBracket, lastBracket + 1);
-  }
-  
-  return cleaned;
+
+  return cleaned.substring(startIndex, endIndex);
 };
 
 // ... (Rest of the services remain mostly the same, keeping existing exports)

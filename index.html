@@ -25,7 +25,7 @@
               raleway: ['Raleway', 'sans-serif'],
               oswald: ['Oswald', 'sans-serif'],
               playfair: ['Playfair Display', 'serif'],
-              dyslexic: ['Comic Neue', 'cursive'], // Dyslexia friendly alternative
+              dyslexic: ['Comic Neue', 'cursive'], 
             },
             colors: {
               trampo: {
@@ -65,11 +65,10 @@
       }
     </script>
     
-    <!-- Importação de TODAS as fontes utilizadas nos temas -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:wght@300;400;700&family=Roboto+Mono:wght@400;500&family=Poppins:wght@400;600;700&family=Lato:wght@400;700&family=Open+Sans:wght@400;600&family=Montserrat:wght@400;600;700&family=Raleway:wght@400;600&family=Oswald:wght@400;500;700&family=Playfair+Display:wght@400;600;700&family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
-      /* Custom Scrollbar Refinada */
+      /* --- 1. Scrollbar Premium --- */
       ::-webkit-scrollbar { width: 6px; height: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -77,7 +76,11 @@
       .dark ::-webkit-scrollbar-thumb { background: #334155; }
       .dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
       
-      /* Input Auto-fill fix for dark mode */
+      /* --- 3. Brand Selection --- */
+      ::selection { background-color: rgba(14, 165, 233, 0.3); color: #0c4a6e; }
+      .dark ::selection { background-color: rgba(14, 165, 233, 0.4); color: #fff; }
+
+      /* --- 16. Input Auto-fill fix for dark mode --- */
       input:-webkit-autofill,
       input:-webkit-autofill:hover, 
       input:-webkit-autofill:focus, 
@@ -93,18 +96,39 @@
           -webkit-text-fill-color: white !important;
       }
 
-      /* --- CSS DE IMPRESSÃO (THE REAL FIX) --- */
+      /* --- 8. CSS de Impressão Limpo e Robusto --- */
       @media print {
         @page { margin: 0; size: auto; }
-        body, html { background-color: white !important; height: auto !important; width: 100% !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
+        body, html { 
+            background-color: white !important; 
+            height: auto !important; 
+            width: 100% !important; 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            overflow: visible !important;
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important;
+        }
         
-        #app-navbar, #editor-sidebar, .preview-controls, .theme-selector-modal, .ai-settings-modal, .job-tracker-modal, .linkedin-modal { display: none !important; }
+        #app-navbar, #editor-sidebar, .preview-controls, .theme-selector-modal, .ai-settings-modal, .job-tracker-modal, .linkedin-modal, .Toastify { display: none !important; }
 
         main { display: block !important; overflow: visible !important; height: auto !important; margin: 0 !important; padding: 0 !important; }
         #preview-area { position: static !important; width: 100% !important; height: auto !important; overflow: visible !important; background: white !important; transform: none !important; display: block !important; }
         #preview-scroll-container { overflow: visible !important; height: auto !important; padding: 0 !important; display: block !important; }
-        #resume-paper { margin: 0 !important; padding: 0 !important; box-shadow: none !important; transform: none !important; width: 100% !important; max-width: 100% !important; position: absolute !important; top: 0 !important; left: 0 !important; border: none !important; }
+        #resume-paper { 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            box-shadow: none !important; 
+            transform: none !important; 
+            width: 100% !important; 
+            max-width: 100% !important; 
+            position: absolute !important; 
+            top: 0 !important; 
+            left: 0 !important; 
+            border: none !important; 
+        }
         
+        /* Força Backgrounds e Cores */
         * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
       }
     </style>
@@ -124,7 +148,7 @@
 }
 </script>
 </head>
-  <body class="bg-slate-50 dark:bg-slate-900 transition-colors duration-300 antialiased selection:bg-trampo-500/30 selection:text-trampo-900">
+  <body class="bg-slate-50 dark:bg-slate-900 transition-colors duration-300 antialiased">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
