@@ -256,20 +256,77 @@ export const generateCoverLetter = async (resumeData: any, company: string, job:
   }
 };
 
-export const generateInterviewQuestions = async (resumeData: any): Promise<string> => {
+export const generateInterviewQuestions = async (resumeData: any): Promise<{technical: string[], behavioral: string[]}> => {
     try {
         const context = `Cargo Alvo: ${resumeData.personalInfo.jobTitle}. Resumo: ${resumeData.personalInfo.summary}. Exp: ${JSON.stringify(resumeData.experience.slice(0,2))}`;
-        const system = `Você é um recrutador técnico exigente. Com base no perfil do candidato, gere 5 perguntas de entrevista desafiadoras (3 técnicas, 2 comportamentais). Retorne apenas as perguntas em formato de lista Markdown.`;
-        return await callLLM(context, system);
-    } catch (e) { return "Erro ao gerar perguntas."; }
+        const system = `Você é um recrutador técnico exigente. Com base no perfil do candidato, gere perguntas de entrevista.
+        Retorne 3 perguntas TÉCNICAS (hard skills) e 2 COMPORTAMENTAIS (soft skills).`;
+        
+        const schema = {
+            type: Type.OBJECT,
+            properties: {
+                technical: { type: Type.ARRAY, items: { type: Type.STRING } },
+                behavioral: { type: Type.ARRAY, items: { type: Type.STRING } }
+            }
+        };
+
+        const response = await callLLM(context, system, true, schema);
+        return JSON.parse(cleanJSON(response));
+    } catch (e) { 
+        return { technical: ["Erro ao gerar"], behavioral: [] }; 
+    }
 };
 
-export const generateLinkedinHeadline = async (resumeData: any): Promise<string> => {
+export const generateLinkedinHeadline = async (resumeData: any): Promise<string[]> => {
     try {
         const context = `Nome: ${resumeData.personalInfo.fullName}. Cargo: ${resumeData.personalInfo.jobTitle}. Skills: ${resumeData.skills.map((s:any) => s.name).join(', ')}`;
-        const system = `Crie 3 opções de Headline para LinkedIn (máx 220 chars) que sejam atraentes e usem palavras-chave. Retorne apenas as 3 opções separadas por quebra de linha. Use ícones/emojis moderadamente.`;
+        const system = `Crie 4 opções de Headline para LinkedIn altamente otimizadas para recrutadores.
+        
+        REGRAS RÍGIDAS:
+        1. Máximo 220 caracteres.
+        2. Use palavras-chave separadas por barras (|) ou bullets (•).
+        3. SEM hashtags (#).
+        4. SEM frases motivacionais clichês.
+        5. Foco em Cargo + Especialidade + Valor Gerado.`;
+        
+        const schema = {
+            type: Type.ARRAY,
+            items: { type: Type.STRING }
+        };
+
+        const response = await callLLM(context, system, true, schema);
+        return JSON.parse(cleanJSON(response));
+    } catch (e) { 
+        return []; 
+    }
+};
+
+export const generateLinkedinAbout = async (resumeData: any): Promise<string> => {
+    try {
+        const context = `Cargo: ${resumeData.personalInfo.jobTitle}. Resumo CV: ${resumeData.personalInfo.summary}. Exp: ${JSON.stringify(resumeData.experience.slice(0,2))}`;
+        const system = `Escreva uma seção "Sobre" (About) para o LinkedIn.
+        ESTILO: Storytelling, primeira pessoa, conversacional mas profissional.
+        ESTRUTURA:
+        1. Gancho (Hook): Comece com o que te move.
+        2. Experiência: Resumo da trajetória.
+        3. Conquistas: 1 ou 2 destaques.
+        4. Call to Action: Convite para conexão.
+        Use emojis moderadamente. Português do Brasil.`;
+        
         return await callLLM(context, system);
-    } catch (e) { return "Erro ao gerar headline."; }
+    } catch (e) { return "Erro ao gerar Sobre."; }
+};
+
+export const rewriteExperienceForLinkedin = async (experience: any): Promise<string> => {
+    try {
+        const context = `Cargo: ${experience.role}. Empresa: ${experience.company}. Descrição Original: ${experience.description}`;
+        const system = `Reescreva esta experiência para o LinkedIn.
+        Use bullet points com emojis.
+        Foque em "Eu fiz", "Eu liderei", "Resultados".
+        Torne o texto mais engajador para uma rede social, menos formal que um CV tradicional.`;
+        
+        return await callLLM(context, system);
+    } catch (e) { return experience.description; }
 };
 
 // --- NEW FEATURES ---
