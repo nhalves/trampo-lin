@@ -350,18 +350,57 @@ export const translateText = async (text: string, targetLanguage: string): Promi
     return await callLLM(prompt);
 };
 
-export const generateLinkedinHeadline = async (data: ResumeData): Promise<string[]> => {
-    const prompt = `Generate 4 catchy LinkedIn Headlines for: ${data.personalInfo.fullName}, ${data.personalInfo.jobTitle}. Keywords: ${data.skills.map(s => s.name).join(', ')}. Max 220 chars.`;
+// --- LINKEDIN SPECIFIC ---
+
+export const generateLinkedinHeadline = async (data: ResumeData, tone: string = 'Professional'): Promise<string[]> => {
+    const topSkills = data.skills.slice(0, 5).map(s => s.name).join(', ');
+    const prompt = `Generate 4 LinkedIn Headlines for: ${data.personalInfo.fullName}. Role: ${data.personalInfo.jobTitle}. Skills: ${topSkills}. 
+    Tone: ${tone}.
+    Rules: 
+    1. Use separators like | or • 
+    2. Include a "Helping X do Y" statement in at least 2 options.
+    3. Max 220 chars.
+    4. Return ONLY a JSON array of strings.`;
+    
     return parseResponse(await callLLM(prompt, STRING_ARRAY_SCHEMA)) || [];
 };
 
-export const generateLinkedinAbout = async (data: ResumeData): Promise<string> => {
-    const prompt = `Write an engaging LinkedIn 'About' section for ${data.personalInfo.jobTitle}. Use storytelling. 1st Person.`;
+export const generateLinkedinAbout = async (data: ResumeData, tone: string = 'Storytelling'): Promise<string> => {
+    const skills = data.skills.map(s => s.name).join(', ');
+    const lastExp = data.experience[0];
+    const expSummary = lastExp ? `Currently ${lastExp.role} at ${lastExp.company}` : '';
+    
+    const prompt = `Write an engaging LinkedIn 'About' section (Bio).
+    Candidate: ${data.personalInfo.fullName}, ${data.personalInfo.jobTitle}.
+    Context: ${data.personalInfo.summary}. ${expSummary}.
+    Skills: ${skills}.
+    
+    Tone: ${tone} (First person, conversational, professional but authentic).
+    Structure:
+    1. Hook (catchy opening).
+    2. My Journey (briefly connects past to present).
+    3. What I do / My Expertise.
+    4. Call to Action / Contact.
+    
+    Use paragraphs for readability. Language: PT-BR.`;
+
     return await callLLM(prompt);
 };
 
-export const rewriteExperienceForLinkedin = async (experience: any): Promise<string> => {
-    const prompt = `Rewrite this job experience as a LinkedIn post/achievement block. Use appropriate emojis. Role: ${experience.role}. Desc: ${experience.description}`;
+export const rewriteExperienceForLinkedin = async (experience: any, tone: string = 'Professional'): Promise<string> => {
+    const prompt = `Rewrite this job experience for a LinkedIn Profile.
+    Role: ${experience.role} at ${experience.company}.
+    Original Desc: ${experience.description}.
+    
+    Tone: ${tone}.
+    Format:
+    - Use a short intro sentence.
+    - Use bullet points with emojis for key achievements.
+    - Focus on Results and Impact (CAR method - Challenge, Action, Result).
+    - Since LinkedIn doesn't support Markdown, use Unicode Bold text (like 𝗧𝗵𝗶𝘀) for key metrics or headers.
+    
+    Language: PT-BR.`;
+    
     return await callLLM(prompt);
 };
 
