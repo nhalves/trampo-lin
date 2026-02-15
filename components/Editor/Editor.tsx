@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { ResumeData, ResumeSettings } from '../../types';
 import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Wand2, Eye, EyeOff, ArrowUp, ArrowDown, Settings, Briefcase, GraduationCap, Medal, Code, User, Languages, FileText, Search, QrCode, Heart, Award, Users, FilePlus, Copy, Eraser, Languages as LangIcon, Upload, X, Type, Undo2, Redo2, Download, RefreshCw, Star, Globe, PenTool, CheckCircle2, AlertCircle, FileUp, Calendar, Link2, Mail, Phone, MapPin, FileJson, Twitter, Dribbble, Hash, Bold, Italic, List, Linkedin, BookOpen, Feather, Zap, Smile, Book, Timer, MessageSquare, Briefcase as BriefcaseIcon, LayoutGrid, GripVertical, Target, Maximize2, Minimize2, Camera, DollarSign, Mic, MicOff, Palette, Github, Check, AlertTriangle } from 'lucide-react';
 import { improveText, generateSummary, suggestSkills, generateCoverLetter, analyzeJobMatch, translateText, generateBulletPoints, extractResumeFromPdf, generateInterviewQuestions, generateLinkedinHeadline, tailorResume, analyzeGap, estimateSalary, analyzePhoto } from '../../services/geminiService';
@@ -29,7 +29,7 @@ const handleDateInput = (value: string) => {
 
 const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-// --- COMPRESS IMAGE UTILITY ---
+// --- COMPRESS IMAGE UTILITY (Optimized for WebP) ---
 const compressImage = (file: File, maxWidth = 300, quality = 0.8): Promise<string> => {
     return new Promise((resolve) => {
         const reader = new FileReader();
@@ -51,13 +51,35 @@ const compressImage = (file: File, maxWidth = 300, quality = 0.8): Promise<strin
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx?.drawImage(img, 0, 0, width, height);
-                resolve(canvas.toDataURL('image/jpeg', quality));
+                // Prefer WebP for better compression, fallback to JPEG
+                const mimeType = 'image/webp';
+                const dataUrl = canvas.toDataURL(mimeType, quality);
+                // If browser doesn't support WebP or result is huge, fallback to JPEG
+                if (dataUrl.indexOf('image/webp') === -1 || dataUrl.length > 500000) {
+                     resolve(canvas.toDataURL('image/jpeg', quality));
+                } else {
+                     resolve(dataUrl);
+                }
             };
         };
     });
 };
 
-const DebouncedInput = ({ label, value, onChange, type = "text", placeholder = "", step, disabled, icon: Icon, isDate, className }: any) => {
+// --- SAFE MERGE UTILITY ---
+const safeMergeResume = (current: ResumeData, imported: any): ResumeData => {
+    return {
+        ...current,
+        ...imported,
+        personalInfo: { ...current.personalInfo, ...(imported.personalInfo || {}) },
+        settings: { ...current.settings, ...(imported.settings || {}) },
+        experience: imported.experience || [],
+        education: imported.education || [],
+        skills: imported.skills || [],
+    };
+};
+
+// Memoized Inputs to prevent re-renders
+const DebouncedInput = memo(({ label, value, onChange, type = "text", placeholder = "", step, disabled, icon: Icon, isDate, className }: any) => {
     const [localValue, setLocalValue] = useState(value);
     useEffect(() => { setLocalValue(value); }, [value]);
     useEffect(() => {
@@ -81,9 +103,9 @@ const DebouncedInput = ({ label, value, onChange, type = "text", placeholder = "
             </div>
         </div>
     );
-};
+});
 
-const DebouncedTextarea = ({ value, onChange, placeholder, className, id, showCounter = false, maxLength }: any) => {
+const DebouncedTextarea = memo(({ value, onChange, placeholder, className, id, showCounter = false, maxLength }: any) => {
     const [localValue, setLocalValue] = useState(value);
     const [isListening, setIsListening] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -138,9 +160,10 @@ const DebouncedTextarea = ({ value, onChange, placeholder, className, id, showCo
             )}
         </div>
     );
-};
+});
 
-const Section = ({ title, icon: Icon, children, isOpen, onToggle, isVisible, onVisibilityToggle, onClear, itemCount }: any) => (
+// Memoized Section to prevent massive re-renders
+const Section = memo(({ title, icon: Icon, children, isOpen, onToggle, isVisible, onVisibilityToggle, onClear, itemCount }: any) => (
   <div className={`group border border-transparent rounded-xl transition-all duration-300 mb-4 ${isOpen ? 'bg-white dark:bg-slate-800 shadow-sm ring-1 ring-slate-200 dark:ring-slate-700' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
     <div className={`flex items-center justify-between p-4 cursor-pointer select-none rounded-xl ${!isVisible && isVisible !== undefined ? 'opacity-50 grayscale' : ''}`} onClick={onToggle}>
       <div className="flex-1 flex items-center gap-3 text-left">
@@ -172,7 +195,7 @@ const Section = ({ title, icon: Icon, children, isOpen, onToggle, isVisible, onV
         <div className="overflow-hidden"><div className="p-4 pt-0">{children}</div></div>
     </div>
   </div>
-);
+));
 
 export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onRequestConfirm, focusMode, setFocusMode }) => {
   const [openSection, setOpenSection] = useState<string>('personal');
@@ -191,7 +214,6 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
   const [githubUsername, setGithubUsername] = useState('');
   
   const [interviewQs, setInterviewQs] = useState<{technical: string[], behavioral: string[]} | null>(null);
-  const [linkedinHeadlines, setLinkedinHeadlines] = useState<string[]>([]);
   
   const [history, setHistory] = useState<ResumeData[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -237,7 +259,7 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
       handleChangeWithHistory({ ...data, [listName]: list }); onShowToast("Item reordenado.");
   };
 
-  const updateSettings = (field: keyof ResumeSettings, value: any) => { handleChangeWithHistory({ ...data, settings: { ...data.settings, [field]: value } }); };
+  const updateSettings = useCallback((field: keyof ResumeSettings, value: any) => { handleChangeWithHistory({ ...data, settings: { ...data.settings, [field]: value } }); }, [data, handleChangeWithHistory]);
   const calculateCompleteness = () => {
     let score = 0;
     if (data.personalInfo.fullName) score += 10;
@@ -259,7 +281,6 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // FIX: Compress image to avoid localStorage quota exceeded error
       try {
           const compressedBase64 = await compressImage(file, 300, 0.8);
           try { const dominantColor = await extractDominantColor(compressedBase64); if (dominantColor) { onRequestConfirm("Cor Detectada", "Aplicar cor predominante da foto?", () => updateSettings('primaryColor', dominantColor), 'info'); } } catch(e) {}
@@ -272,8 +293,23 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
   };
 
   const handleJsonImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onload = (ev) => { try { const imported = JSON.parse(ev.target?.result as string); handleChangeWithHistory({ ...INITIAL_RESUME, ...imported }); onShowToast("Currículo carregado!"); } catch (e) { onShowToast("Erro: Arquivo inválido."); } }; reader.readAsText(file); }
+    const file = e.target.files?.[0]; 
+    if (file) { 
+        const reader = new FileReader(); 
+        reader.onload = (ev) => { 
+            try { 
+                const imported = JSON.parse(ev.target?.result as string); 
+                const mergedData = safeMergeResume(INITIAL_RESUME, imported);
+                handleChangeWithHistory(mergedData); 
+                onShowToast("Currículo carregado!"); 
+            } catch (e) { 
+                onShowToast("Erro: Arquivo inválido."); 
+            } 
+        }; 
+        reader.readAsText(file); 
+    }
   };
+  
   const handleJsonExport = () => { const dataStr = JSON.stringify(data, null, 2); const blob = new Blob([dataStr], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `backup-trampolin-${data.personalInfo.fullName.replace(/\s+/g, '-').toLowerCase()}.json`; a.click(); };
   const handleReset = () => { onRequestConfirm("Resetar Currículo?", "Isso apagará TODOS os dados atuais.", () => { handleChangeWithHistory(INITIAL_RESUME); onShowToast("Reiniciado."); }, 'danger'); };
   const loadExample = (example: ResumeData) => { onRequestConfirm("Carregar Exemplo?", "Seus dados atuais serão perdidos.", () => { handleChangeWithHistory(example); onShowToast("Exemplo carregado!"); setShowExamples(false); }, 'info'); };
@@ -322,7 +358,8 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
             setLoadingAI('convert-pdf');
             const extractedData = await extractResumeFromPdf(atsFile);
             if (extractedData) {
-                handleChangeWithHistory({ ...INITIAL_RESUME, personalInfo: { ...INITIAL_RESUME.personalInfo, ...extractedData.personalInfo }, experience: extractedData.experience || [], education: extractedData.education || [], skills: extractedData.skills || [], languages: extractedData.languages || [] });
+                const mergedData = safeMergeResume(INITIAL_RESUME, extractedData);
+                handleChangeWithHistory(mergedData);
                 onShowToast("Currículo convertido!");
                 setActiveTab('resume');
             } else { onShowToast("Erro ao converter."); }
@@ -341,7 +378,7 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
       setLoadingAI(null);
   };
 
-  const handleListChange = (listName: string, index: number, field: string, value: any) => { const list = [...(data as any)[listName]]; list[index] = { ...list[index], [field]: value }; handleChangeWithHistory({ ...data, [listName]: list }); };
+  const handleListChange = useCallback((listName: string, index: number, field: string, value: any) => { const list = [...(data as any)[listName]]; list[index] = { ...list[index], [field]: value }; handleChangeWithHistory({ ...data, [listName]: list }); }, [data, handleChangeWithHistory]);
   const addItem = (listName: string, item: any) => { handleChangeWithHistory({ ...data, [listName]: [item, ...(data as any)[listName]] }); onShowToast("Item adicionado."); };
   const removeItem = (listName: string, index: number) => { onRequestConfirm("Remover?", "Deseja remover este item?", () => { const list = [...(data as any)[listName]]; handleChangeWithHistory({ ...data, [listName]: list.filter((_, i) => i !== index) }); }, 'danger'); };
   const clearList = (listName: string) => { onRequestConfirm("Limpar Seção?", `Esvaziar ${listName}?`, () => { handleChangeWithHistory({ ...data, [listName]: [] }); onShowToast("Seção limpa."); }, 'danger'); };
