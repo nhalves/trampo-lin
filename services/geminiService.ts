@@ -363,7 +363,7 @@ export const translateText = async (text: string, targetLanguage: string): Promi
 
 export const generateLinkedinHeadline = async (data: ResumeData, tone: string = 'Professional'): Promise<string[]> => {
     const topSkills = data.skills.slice(0, 5).map(s => s.name).join(', ');
-    const prompt = `Generate 4 LinkedIn Headlines for: ${data.personalInfo.fullName}. Role: ${data.personalInfo.jobTitle}. Skills: ${topSkills}. 
+    const prompt = `Generate 4 LinkedIn Headlines for: Role: ${data.personalInfo.jobTitle}. Skills: ${topSkills}. 
     Tone: ${tone}.
     Rules: 
     1. Use separators like | or • 
