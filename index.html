@@ -96,59 +96,52 @@
           -webkit-text-fill-color: white !important;
       }
 
-      /* --- 8. CSS de Impressão Robusto --- */
+      /* --- 8. CSS de Impressão Definitivo --- */
       @media print {
         @page { margin: 0; size: auto; }
         
-        /* 1. Esconder Interface do App */
-        #app-navbar, 
-        #editor-sidebar, 
-        .preview-controls, 
-        .job-tracker-modal, 
-        .ai-settings-modal, 
-        .linkedin-modal, 
-        .Toastify,
-        .onboarding-overlay { 
-            display: none !important; 
+        /* 1. Oculta tudo por padrão para limpar a tela */
+        body * {
+            visibility: hidden;
         }
 
-        /* 2. Resetar Layout dos Containers Pais */
-        html, body, #root, main, #preview-area, #preview-scroll-container {
-            background-color: white !important;
-            width: 100% !important;
-            height: auto !important;
-            min-height: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: visible !important;
-            position: static !important;
-            display: block !important;
+        /* 2. Torna visível APENAS o papel do currículo e seus conteúdos */
+        #resume-paper, #resume-paper * {
+            visibility: visible;
         }
 
-        /* 3. Estilizar o Papel do Currículo */
+        /* 3. Posiciona o currículo no topo absoluto, ignorando containers pais */
         #resume-paper {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
             width: 100% !important;
-            max-width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
+            
+            /* Remove transformações de zoom e sombras */
+            transform: none !important;
             box-shadow: none !important;
             border: none !important;
             
-            /* Remove transformações de zoom */
-            transform: none !important; 
-            
-            /* Garante visibilidade e posicionamento */
-            position: relative !important;
-            left: 0 !important;
-            top: 0 !important;
-            display: block !important;
+            /* Garante que o fundo seja branco */
+            background-color: white !important;
+            z-index: 9999 !important;
         }
-        
-        /* 4. Forçar Cores Exatas (Backgrounds, Borders) */
-        * { 
-            -webkit-print-color-adjust: exact !important; 
-            print-color-adjust: exact !important; 
-            color-adjust: exact !important;
+
+        /* 4. Reseta configurações globais que podem atrapalhar */
+        html, body {
+            background: white !important;
+            height: auto !important;
+            overflow: visible !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* 5. Garante que as cores sejam impressas corretamente (backgrounds de skills, etc) */
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
         }
       }
     </style>

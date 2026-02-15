@@ -168,7 +168,6 @@ const App: React.FC = () => {
   };
 
   const handlePrint = () => {
-      // setShowPrintModal(false); // Modal state no longer needed for direct print
       setTimeout(() => {
           const oldTitle = document.title;
           const sanitizedName = resumeData.personalInfo.fullName.replace(/[^a-z0-9]/gi, '_');
@@ -372,7 +371,7 @@ const App: React.FC = () => {
                   id="resume-paper"
                   ref={printRef} 
                   data-size={resumeData.settings.paperSize}
-                  className={`relative flex-shrink-0 bg-white shadow-2xl transition-transform duration-200 origin-top print:shadow-none print:m-0 print:absolute print:top-0 print:left-0 print:w-full print:z-50 print:transform-none`}
+                  className={`relative flex-shrink-0 bg-white shadow-2xl transition-transform duration-200 origin-top`}
                   style={{ width: resumeData.settings.paperSize === 'letter' ? '215.9mm' : '210mm', minHeight: resumeData.settings.paperSize === 'letter' ? '279.4mm' : '297mm', transform: `scale(${zoom})` }}
                 >
                   <Preview data={resumeData} theme={THEMES.find(t => t.id === activeThemeId) || THEMES[0]} mode={previewMode} />
