@@ -6,11 +6,10 @@ import { AIConfig, ResumeData, TailoredContent, GapAnalysis, PhotoAnalysis } fro
 const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash'; 
 const DEFAULT_OPENROUTER_MODEL = 'google/gemini-2.0-flash-001'; 
 
-// Instruções de Sistema Otimizadas
-const SYSTEM_INSTRUCTION = "You are an expert Resume AI Assistant. You effectively act as a middleware between raw user data and a structured JSON frontend. Your output must be strictly valid JSON conforming to the provided schema. Do not output Markdown blocks. Do not be conversational.";
+// Instruções de Sistema Base
+const SYSTEM_INSTRUCTION = "You are an expert Resume AI Assistant helping users create professional resumes and LinkedIn profiles. Be professional, direct, and helpful.";
 
 // --- SCHEMAS REUTILIZÁVEIS ---
-// Definir schemas estritos elimina a necessidade de "adivinhar" o JSON e reduz latência/tokens.
 
 const STRING_ARRAY_SCHEMA: Schema = {
     type: Type.ARRAY,
@@ -92,14 +91,28 @@ const getEffectiveApiKey = (config: AIConfig): string => {
     return '';
 };
 
-// Robust Mime Type Detection
 const getMimeTypeFromBase64 = (base64String: string): string => {
     const match = base64String.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,.*/);
     return match && match.length > 1 ? match[1] : 'image/jpeg';
 };
 
-// --- GENERIC LLM CALLER ---
-// Agora aceita um Schema opcional para forçar JSON estruturado no Gemini
+// Remove artefatos comuns de LLMs (aspas, markdown, preâmbulos)
+const cleanTextResponse = (text: string): string => {
+    if (!text) return "";
+    let cleaned = text;
+    
+    // Remove blocos de código markdown
+    cleaned = cleaned.replace(/```(?:json|markdown|text)?\n?([\s\S]*?)```/g, '$1');
+    
+    // Remove aspas envolventes se o modelo retornou "Texto"
+    cleaned = cleaned.replace(/^["']|["']$/g, '');
+    
+    // Remove prefixos conversacionais comuns
+    cleaned = cleaned.replace(/^(Here is|Sure,|Certainly,|I have generated|Below is).*?:\s*/i, '');
+    
+    return cleaned.trim();
+};
+
 const callLLM = async (
     prompt: string | any[], 
     schema?: Schema
@@ -109,8 +122,15 @@ const callLLM = async (
 
     if (!apiKey) throw new Error("API Key não configurada.");
 
+    // Adapta a instrução do sistema baseada na presença de Schema
+    let systemInstruction = SYSTEM_INSTRUCTION;
+    if (schema) {
+        systemInstruction += " You effectively act as a middleware between raw user data and a structured JSON frontend. Your output must be strictly valid JSON conforming to the provided schema. Do not output Markdown blocks.";
+    } else {
+        systemInstruction += " Return only the requested text content. Do not output conversational filler. Do not use Markdown formatting (like **bold**) unless specifically requested.";
+    }
+
     if (config.provider === 'openrouter') {
-        // OpenRouter fallback (menos robusto com schemas complexos, usamos JSON mode genérico)
         try {
             const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                 method: "POST",
@@ -123,7 +143,7 @@ const callLLM = async (
                 body: JSON.stringify({
                     model: config.model || DEFAULT_OPENROUTER_MODEL,
                     messages: [
-                        { role: "system", content: SYSTEM_INSTRUCTION },
+                        { role: "system", content: systemInstruction },
                         { role: "user", content: typeof prompt === 'string' ? prompt : JSON.stringify(prompt) }
                     ],
                     response_format: schema ? { type: "json_object" } : undefined
@@ -137,7 +157,6 @@ const callLLM = async (
             throw error;
         }
     } else {
-        // Native Gemini Implementation
         const ai = new GoogleGenAI({ apiKey: apiKey });
         const modelName = config.model || DEFAULT_GEMINI_MODEL;
         
@@ -148,8 +167,7 @@ const callLLM = async (
                 model: modelName,
                 contents: contents,
                 config: {
-                    systemInstruction: SYSTEM_INSTRUCTION,
-                    // Se tiver schema, força MIME JSON e passa o schema
+                    systemInstruction: systemInstruction,
                     responseMimeType: schema ? "application/json" : "text/plain",
                     responseSchema: schema,
                 }
@@ -162,16 +180,14 @@ const callLLM = async (
     }
 };
 
-// Helper: Garante que o JSON retornado esteja limpo, mesmo se o modelo adicionar ```json
 const parseResponse = (text: string): any => {
     if (!text) return null;
     try {
-        // Remove markdown wrappers se existirem
         const cleaned = text.replace(/```json\n?|```/g, '').trim();
         return JSON.parse(cleaned);
     } catch (e) {
         console.error("JSON Parse Error", e, text);
-        return null; // Fail gracefully
+        return null;
     }
 };
 
@@ -186,13 +202,11 @@ export const improveText = async (text: string, context: string, tone: string, a
         default: `Rewrite to be more impactful. Tone: ${tone}. Language: PT-BR.`
     };
     
-    // Para texto simples, não usamos schema, pois queremos liberdade criativa, mas instruímos o modelo
-    const prompt = `Context: ${context}. Instruction: ${instructions[action || 'default'] || instructions.default}. Text: "${text}"`;
-    return await callLLM(prompt);
+    const prompt = `Context: ${context}. Instruction: ${instructions[action || 'default'] || instructions.default}. Text: "${text}". Return ONLY the improved text.`;
+    return cleanTextResponse(await callLLM(prompt));
 };
 
 export const generateBulletPoints = async (role: string, company: string): Promise<string> => {
-    // Usamos Schema de Array para garantir que volta uma lista limpa, depois formatamos
     const prompt = `Generate 3 strong, action-oriented resume bullet points for the role of "${role}" at "${company || 'Company'}". Language: PT-BR.`;
     const response = await callLLM(prompt, STRING_ARRAY_SCHEMA);
     const items = parseResponse(response);
@@ -205,19 +219,19 @@ export const generateBulletPoints = async (role: string, company: string): Promi
 
 export const generateSummary = async (jobTitle: string, experience: any[]): Promise<string> => {
     const expContext = experience.slice(0, 3).map(e => `${e.role} at ${e.company}`).join(', ');
-    const prompt = `Write a professional resume summary (1st person) for a "${jobTitle}". Highlights: ${expContext}. Max 4 sentences. Tone: Senior & Result-oriented. Language: PT-BR.`;
-    return await callLLM(prompt);
+    const prompt = `Write a professional resume summary (1st person) for a "${jobTitle}". Highlights: ${expContext}. Max 4 sentences. Tone: Senior & Result-oriented. Language: PT-BR. Return ONLY the text.`;
+    return cleanTextResponse(await callLLM(prompt));
 };
 
 export const suggestSkills = async (jobTitle: string): Promise<string[]> => {
     const prompt = `List 8 essential hard/soft skills for a "${jobTitle}". Language: PT-BR.`;
-    const response = await callLLM(prompt, STRING_ARRAY_SCHEMA); // Force Array<String>
+    const response = await callLLM(prompt, STRING_ARRAY_SCHEMA);
     return parseResponse(response) || [];
 };
 
 export const generateCoverLetter = async (resumeData: any, company: string, job: string): Promise<string> => {
-    const prompt = `Write a cover letter for "${company}", role "${job}". Candidate: ${resumeData.personalInfo.fullName}, current role: ${resumeData.personalInfo.jobTitle}. Structure: Hook, Why Me, Why Company, Call to Action. Language: PT-BR.`;
-    return await callLLM(prompt);
+    const prompt = `Write a cover letter for "${company}", role "${job}". Candidate: ${resumeData.personalInfo.fullName}, current role: ${resumeData.personalInfo.jobTitle}. Structure: Hook, Why Me, Why Company, Call to Action. Language: PT-BR. Return ONLY the body content, no headers or addresses.`;
+    return cleanTextResponse(await callLLM(prompt));
 };
 
 export const generateInterviewQuestions = async (resumeData: any): Promise<{technical: string[], behavioral: string[]}> => {
@@ -286,14 +300,12 @@ export const analyzeJobMatch = async (resumeInput: string | { mimeType: string, 
     };
 
     if (typeof resumeInput !== 'string') {
-        // Multimodal call
         const promptParts = [
             { inlineData: { mimeType: resumeInput.mimeType, data: resumeInput.data } },
             { text: `Analyze this resume against the Job Description: "${jobDescription}". Provide match score, feedback, and missing keywords.` }
         ];
         return parseResponse(await callLLM(promptParts, schema));
     } else {
-        // Text call
         const prompt = `Analyze resume vs Job. Job: ${jobDescription}. Resume JSON: ${resumeInput}`;
         return parseResponse(await callLLM(prompt, schema));
     }
@@ -325,7 +337,6 @@ export const analyzePhoto = async (base64Image: string): Promise<PhotoAnalysis |
 };
 
 export const extractResumeFromPdf = async (fileData: { mimeType: string, data: string }): Promise<any> => {
-    // RESUME_SCHEMA já está definido no topo
     try {
         const promptParts = [
             { inlineData: { mimeType: fileData.mimeType, data: fileData.data } },
@@ -338,16 +349,14 @@ export const extractResumeFromPdf = async (fileData: { mimeType: string, data: s
     }
 };
 
-// --- Non-Schema Helper ---
 export const estimateSalary = async (data: ResumeData): Promise<string> => {
-    // Retorna string simples
     const prompt = `Act as a Brazilian Tech Recruiter. Estimate monthly salary range (BRL) for: ${data.personalInfo.jobTitle}, ${data.experience.length * 2} years exp approximate. Return ONLY the range string (e.g. "R$ 8.000 - R$ 12.000").`;
-    return await callLLM(prompt);
+    return cleanTextResponse(await callLLM(prompt));
 };
 
 export const translateText = async (text: string, targetLanguage: string): Promise<string> => {
-    const prompt = `Translate to ${targetLanguage}. Keep technical terms original. Text: "${text}"`;
-    return await callLLM(prompt);
+    const prompt = `Translate to ${targetLanguage}. Keep technical terms original. Text: "${text}". Return ONLY the translated text.`;
+    return cleanTextResponse(await callLLM(prompt));
 };
 
 // --- LINKEDIN SPECIFIC ---
@@ -382,9 +391,15 @@ export const generateLinkedinAbout = async (data: ResumeData, tone: string = 'St
     3. What I do / My Expertise.
     4. Call to Action / Contact.
     
-    Use paragraphs for readability. Language: PT-BR.`;
+    Rules:
+    - Use paragraphs for readability.
+    - Language: PT-BR.
+    - Return ONLY the text content.
+    - Do NOT wrap in JSON.
+    - Do NOT use Markdown formatting (bold, italics, headers) as LinkedIn does not support it directly.
+    - Use Emoji moderately if tone permits.`;
 
-    return await callLLM(prompt);
+    return cleanTextResponse(await callLLM(prompt));
 };
 
 export const rewriteExperienceForLinkedin = async (experience: any, tone: string = 'Professional'): Promise<string> => {
@@ -397,18 +412,18 @@ export const rewriteExperienceForLinkedin = async (experience: any, tone: string
     - Use a short intro sentence.
     - Use bullet points with emojis for key achievements.
     - Focus on Results and Impact (CAR method - Challenge, Action, Result).
-    - Since LinkedIn doesn't support Markdown, use Unicode Bold text (like 𝗧𝗵𝗶𝘀) for key metrics or headers.
+    - Since LinkedIn doesn't support Markdown, use Unicode Bold text (like 𝗧𝗵𝗶𝘀) for key metrics or headers if needed. Do NOT use standard markdown (**bold**).
     
-    Language: PT-BR.`;
+    Language: PT-BR.
+    Return ONLY the text content.`;
     
-    return await callLLM(prompt);
+    return cleanTextResponse(await callLLM(prompt));
 };
 
 export const validateConnection = async (config: AIConfig): Promise<boolean> => {
     const apiKey = getEffectiveApiKey(config);
     if (!apiKey) return false;
     try {
-        // Simple ping
         if (config.provider === 'openrouter') {
              await fetch("https://openrouter.ai/api/v1/chat/completions", {
                 method: "POST",
