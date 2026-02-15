@@ -104,7 +104,7 @@ const App: React.FC = () => {
       const handleGlobalKeyDown = (e: KeyboardEvent) => {
           if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
               e.preventDefault();
-              setShowPrintModal(true);
+              handlePrint();
           }
           if ((e.ctrlKey || e.metaKey) && e.key === 's') {
               e.preventDefault();
@@ -168,7 +168,7 @@ const App: React.FC = () => {
   };
 
   const handlePrint = () => {
-      setShowPrintModal(false);
+      // setShowPrintModal(false); // Modal state no longer needed for direct print
       setTimeout(() => {
           const oldTitle = document.title;
           const sanitizedName = resumeData.personalInfo.fullName.replace(/[^a-z0-9]/gi, '_');
@@ -298,7 +298,7 @@ const App: React.FC = () => {
                   <button onClick={() => setPreviewMode('cover')} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all active:scale-95 ${previewMode === 'cover' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white ring-1 ring-black/5' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>CARTA</button>
               </div>
               <button onClick={() => setShowThemeSelector(!showThemeSelector)} className={`p-2.5 rounded-xl transition-all active:scale-95 ${showThemeSelector ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300' : 'text-slate-500 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10'}`} title="Temas"><Palette size={20}/></button>
-              <button onClick={() => setShowPrintModal(true)} className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 text-white rounded-xl text-sm font-bold shadow-lg shadow-slate-900/20 dark:shadow-white/5 transition-all active:scale-95" title="Baixar PDF (Ctrl+P)"><Printer size={18}/> <span>Baixar</span></button>
+              <button onClick={handlePrint} className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 text-white rounded-xl text-sm font-bold shadow-lg shadow-slate-900/20 dark:shadow-white/5 transition-all active:scale-95" title="Baixar PDF (Ctrl+P)"><Printer size={18}/> <span>Baixar</span></button>
             </div>
           </nav>
       )}
@@ -391,7 +391,7 @@ const App: React.FC = () => {
                <button onClick={handleAutoFit} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-colors active:scale-95" title="Ajustar à Tela (Fit)"><Maximize size={16}/></button>
                <button onClick={() => setZoom(window.innerWidth < 768 ? 0.45 : 0.8)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-colors active:scale-95" title="Resetar"><RotateCcw size={16}/></button>
                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 md:hidden"></div>
-               <button onClick={() => setShowPrintModal(true)} className="md:hidden p-2 bg-slate-900 text-white rounded-xl shadow-lg active:scale-95"><Printer size={18}/></button>
+               <button onClick={handlePrint} className="md:hidden p-2 bg-slate-900 text-white rounded-xl shadow-lg active:scale-95"><Printer size={18}/></button>
             </div>
           </div>
         )}
