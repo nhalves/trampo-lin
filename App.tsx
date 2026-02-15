@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Editor } from './components/Editor/Editor';
 import { Preview } from './components/Preview/Preview';
 import { ConfirmDialog } from './components/ConfirmDialog';
@@ -20,7 +21,6 @@ const App: React.FC = () => {
   const [resumeData, setResumeData] = useState<ResumeData>(INITIAL_RESUME);
   const [activeThemeId, setActiveThemeId] = useState<ThemeId>('modern-slate');
   const [showThemeSelector, setShowThemeSelector] = useState(false);
-  const [showPrintModal, setShowPrintModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<'resume' | 'cover'>('resume');
   const [zoom, setZoom] = useState(0.8);
@@ -32,6 +32,9 @@ const App: React.FC = () => {
   const [showJobTracker, setShowJobTracker] = useState(false);
   const [showLinkedinGenerator, setShowLinkedinGenerator] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  
+  // Printing State - The "Absolute Zero" Redo
+  const [isPrinting, setIsPrinting] = useState(false);
   
   // AI Settings State
   const [showAISettings, setShowAISettings] = useState(false);
@@ -55,7 +58,6 @@ const App: React.FC = () => {
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const printRef = useRef<HTMLDivElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
 
   // Load Logic
@@ -99,12 +101,33 @@ const App: React.FC = () => {
     document.title = resumeData.personalInfo.fullName ? `Editando: ${resumeData.personalInfo.fullName}` : 'Trampo-lin | Editor';
   }, [resumeData]);
 
+  // Printing Lifecycle
+  useEffect(() => {
+      if (isPrinting) {
+          // Pequeno delay para garantir que o Portal foi renderizado no DOM
+          const timer = setTimeout(() => {
+            const oldTitle = document.title;
+            const sanitizedName = resumeData.personalInfo.fullName.replace(/[^a-z0-9]/gi, '_');
+            const sanitizedJob = resumeData.personalInfo.jobTitle.replace(/[^a-z0-9]/gi, '_');
+            document.title = `Curriculo-${sanitizedName}-${sanitizedJob}`;
+            
+            window.print();
+            
+            // Restaura estado após impressão (ou cancelamento)
+            document.title = oldTitle;
+            setIsPrinting(false);
+          }, 200);
+
+          return () => clearTimeout(timer);
+      }
+  }, [isPrinting, resumeData]);
+
   // Global Shortcuts
   useEffect(() => {
       const handleGlobalKeyDown = (e: KeyboardEvent) => {
           if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
               e.preventDefault();
-              handlePrint();
+              setIsPrinting(true);
           }
           if ((e.ctrlKey || e.metaKey) && e.key === 's') {
               e.preventDefault();
@@ -165,17 +188,6 @@ const App: React.FC = () => {
           closeConfirm();
         }, 'danger'
       );
-  };
-
-  const handlePrint = () => {
-      setTimeout(() => {
-          const oldTitle = document.title;
-          const sanitizedName = resumeData.personalInfo.fullName.replace(/[^a-z0-9]/gi, '_');
-          const sanitizedJob = resumeData.personalInfo.jobTitle.replace(/[^a-z0-9]/gi, '_');
-          document.title = `Curriculo-${sanitizedName}-${sanitizedJob}`;
-          window.print();
-          document.title = oldTitle;
-      }, 300);
   };
 
   const handleDocxExport = () => {
@@ -297,7 +309,7 @@ const App: React.FC = () => {
                   <button onClick={() => setPreviewMode('cover')} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all active:scale-95 ${previewMode === 'cover' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white ring-1 ring-black/5' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>CARTA</button>
               </div>
               <button onClick={() => setShowThemeSelector(!showThemeSelector)} className={`p-2.5 rounded-xl transition-all active:scale-95 ${showThemeSelector ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300' : 'text-slate-500 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10'}`} title="Temas"><Palette size={20}/></button>
-              <button onClick={handlePrint} className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 text-white rounded-xl text-sm font-bold shadow-lg shadow-slate-900/20 dark:shadow-white/5 transition-all active:scale-95" title="Baixar PDF (Ctrl+P)"><Printer size={18}/> <span>Baixar</span></button>
+              <button onClick={() => setIsPrinting(true)} className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 text-white rounded-xl text-sm font-bold shadow-lg shadow-slate-900/20 dark:shadow-white/5 transition-all active:scale-95" title="Baixar PDF (Ctrl+P)"><Printer size={18}/> <span>Baixar</span></button>
             </div>
           </nav>
       )}
@@ -367,9 +379,9 @@ const App: React.FC = () => {
                 
                 {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
 
+                {/* VISUALIZAÇÃO DO EDITOR (COM ZOOM E SCROLL) */}
                 <div 
                   id="resume-paper"
-                  ref={printRef} 
                   data-size={resumeData.settings.paperSize}
                   className={`relative flex-shrink-0 bg-white shadow-2xl transition-transform duration-200 origin-top`}
                   style={{ width: resumeData.settings.paperSize === 'letter' ? '215.9mm' : '210mm', minHeight: resumeData.settings.paperSize === 'letter' ? '279.4mm' : '297mm', transform: `scale(${zoom})` }}
@@ -390,7 +402,7 @@ const App: React.FC = () => {
                <button onClick={handleAutoFit} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-colors active:scale-95" title="Ajustar à Tela (Fit)"><Maximize size={16}/></button>
                <button onClick={() => setZoom(window.innerWidth < 768 ? 0.45 : 0.8)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-colors active:scale-95" title="Resetar"><RotateCcw size={16}/></button>
                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 md:hidden"></div>
-               <button onClick={handlePrint} className="md:hidden p-2 bg-slate-900 text-white rounded-xl shadow-lg active:scale-95"><Printer size={18}/></button>
+               <button onClick={() => setIsPrinting(true)} className="md:hidden p-2 bg-slate-900 text-white rounded-xl shadow-lg active:scale-95"><Printer size={18}/></button>
             </div>
           </div>
         )}
@@ -399,6 +411,27 @@ const App: React.FC = () => {
       {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
       
       <ConfirmDialog isOpen={confirmConfig.isOpen} title={confirmConfig.title} message={confirmConfig.message} onConfirm={() => { confirmConfig.onConfirm(); closeConfirm(); }} onCancel={closeConfirm} type={confirmConfig.type} />
+
+      {/* PORTAL DE IMPRESSÃO - Renderiza apenas durante a impressão em um nó DOM isolado */}
+      {isPrinting && document.getElementById('print-mount') && createPortal(
+          <div className="bg-white">
+              <div 
+                 style={{ 
+                     width: resumeData.settings.paperSize === 'letter' ? '215.9mm' : '210mm', 
+                     minHeight: resumeData.settings.paperSize === 'letter' ? '279.4mm' : '297mm',
+                     margin: '0 auto',
+                     overflow: 'hidden'
+                 }}
+              >
+                  <Preview 
+                    data={resumeData} 
+                    theme={THEMES.find(t => t.id === activeThemeId) || THEMES[0]} 
+                    mode={previewMode} 
+                  />
+              </div>
+          </div>,
+          document.getElementById('print-mount')!
+      )}
     </div>
   );
 };

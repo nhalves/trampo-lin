@@ -96,63 +96,37 @@
           -webkit-text-fill-color: white !important;
       }
 
-      /* --- 8. CSS de Impressão Definitivo --- */
+      /* --- 8. SISTEMA DE IMPRESSÃO VIA PORTAL --- */
+      /* Este CSS trabalha em conjunto com o createPortal do React */
       @media print {
         @page { margin: 0; size: auto; }
         
-        /* 1. Resetar Layout da SPA (Isso corrige a tela branca) */
-        html, body, #root, main, #preview-area, #preview-scroll-container {
-            width: 100% !important;
-            height: auto !important;
-            min-height: auto !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: visible !important;
-            position: static !important;
-            display: block !important; /* Mata o Flexbox */
-            background-color: white !important;
-        }
-
-        /* 2. Esconder Elementos de UI */
-        #app-navbar,
-        #editor-sidebar,
-        .preview-controls,
-        .job-tracker-modal,
-        .ai-settings-modal,
-        .linkedin-modal,
-        .Toastify,
-        div[role="dialog"], /* Modais genéricos */
-        button {
+        /* Oculta TODA a aplicação principal */
+        body > *:not(#print-mount) {
             display: none !important;
         }
 
-        /* 3. Configurar o Papel do Currículo */
-        #resume-paper {
-            margin: 0 auto !important;
+        /* Reseta o Body */
+        body {
+            background-color: white !important;
+            margin: 0 !important;
             padding: 0 !important;
-            box-shadow: none !important;
-            border: none !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            
-            /* Remove zoom/scale aplicado pelo React */
-            transform: none !important; 
-            
-            position: relative !important;
-            left: auto !important;
-            top: auto !important;
-            
-            /* Garante que o conteúdo quebre páginas corretamente */
-            page-break-inside: auto;
-        }
-        
-        /* 4. Evitar quebra dentro de itens */
-        .section-block, .break-inside-avoid {
-            page-break-inside: avoid;
+            overflow: visible !important;
         }
 
-        /* 5. Forçar Cores */
-        * {
+        /* Exibe e posiciona o Container de Impressão */
+        #print-mount {
+            display: block !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            z-index: 99999 !important;
+        }
+
+        #print-mount * {
+            visibility: visible !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
         }
@@ -169,13 +143,16 @@
     "react": "https://esm.sh/react@^19.2.4",
     "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
     "date-fns": "https://esm.sh/date-fns@^4.1.0",
-    "date-fns/": "https://esm.sh/date-fns@^4.1.0/"
+    "date-fns/": "https://esm.sh/date-fns@^4.1.0/",
+    "react-dom": "https://esm.sh/react-dom@^19.2.4"
   }
 }
 </script>
 </head>
   <body class="bg-slate-50 dark:bg-slate-900 transition-colors duration-300 antialiased">
     <div id="root"></div>
+    <!-- Portal de Impressão: Isolado da árvore principal -->
+    <div id="print-mount"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>
