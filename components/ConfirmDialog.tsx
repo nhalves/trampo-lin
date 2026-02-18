@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { AlertTriangle, Info, X } from 'lucide-react';
+import { AlertTriangle, Info } from 'lucide-react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -23,14 +24,18 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm,
   onCancel
 }) => {
+  const modalRef = useFocusTrap(isOpen, onCancel) as React.RefObject<HTMLDivElement>;
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div 
+        ref={modalRef}
         className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200"
         role="dialog"
         aria-modal="true"
+        tabIndex={-1}
       >
         <div className="p-6">
           <div className="flex items-start gap-4">

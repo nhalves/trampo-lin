@@ -57,7 +57,69 @@ const RESUME_SCHEMA: Schema = {
                     degree: { type: Type.STRING },
                     startDate: { type: Type.STRING },
                     endDate: { type: Type.STRING },
-                    location: { type: Type.STRING }
+                    location: { type: Type.STRING },
+                    description: { type: Type.STRING }
+                }
+            }
+        },
+        projects: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    name: { type: Type.STRING },
+                    description: { type: Type.STRING },
+                    url: { type: Type.STRING },
+                    startDate: { type: Type.STRING },
+                    endDate: { type: Type.STRING }
+                }
+            }
+        },
+        volunteer: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    role: { type: Type.STRING },
+                    organization: { type: Type.STRING },
+                    startDate: { type: Type.STRING },
+                    endDate: { type: Type.STRING },
+                    description: { type: Type.STRING },
+                    current: { type: Type.BOOLEAN }
+                }
+            }
+        },
+        awards: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    title: { type: Type.STRING },
+                    issuer: { type: Type.STRING },
+                    date: { type: Type.STRING }
+                }
+            }
+        },
+        certifications: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    name: { type: Type.STRING },
+                    issuer: { type: Type.STRING },
+                    date: { type: Type.STRING }
+                }
+            }
+        },
+        publications: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    title: { type: Type.STRING },
+                    publisher: { type: Type.STRING },
+                    date: { type: Type.STRING },
+                    url: { type: Type.STRING }
                 }
             }
         },
@@ -71,7 +133,16 @@ const RESUME_SCHEMA: Schema = {
                 }
             }
         },
-        languages: { type: Type.ARRAY, items: { type: Type.STRING } }
+        languages: { type: Type.ARRAY, items: { type: Type.STRING } },
+        interests: { 
+            type: Type.ARRAY, 
+            items: { 
+                type: Type.OBJECT,
+                properties: {
+                    name: { type: Type.STRING }
+                }
+            } 
+        }
     }
 };
 
@@ -357,6 +428,19 @@ export const estimateSalary = async (data: ResumeData): Promise<string> => {
 export const translateText = async (text: string, targetLanguage: string): Promise<string> => {
     const prompt = `Translate to ${targetLanguage}. Keep technical terms original. Text: "${text}". Return ONLY the translated text.`;
     return cleanTextResponse(await callLLM(prompt));
+};
+
+export const translateResumeData = async (data: ResumeData, targetLanguage: string): Promise<any> => {
+    const prompt = `Translate the following Resume JSON to ${targetLanguage}. 
+    - Keep technical terms (React, Node, AWS, Growth Marketing) in original English.
+    - Translate job titles if common (e.g., Software Engineer -> Engenheiro de Software) but keep if industry standard.
+    - Translate descriptions, summaries, and locations.
+    - Do NOT change the JSON structure.
+    
+    Resume Data: ${JSON.stringify(data)}`;
+    
+    const response = await callLLM(prompt, RESUME_SCHEMA);
+    return parseResponse(response);
 };
 
 // --- LINKEDIN SPECIFIC ---
