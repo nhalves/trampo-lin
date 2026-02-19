@@ -5,13 +5,9 @@ import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Wand2, Eye, EyeOff, Arr
 import { improveText, generateSummary, suggestSkills, generateCoverLetter, analyzeJobMatch, translateText, translateResumeData, generateBulletPoints, extractResumeFromPdf, generateInterviewQuestions, generateLinkedinHeadline, tailorResume, analyzeGap, estimateSalary, analyzePhoto } from '../../services/geminiService';
 import { fetchGithubRepos, extractDominantColor } from '../../services/integrationService';
 import { AVAILABLE_FONTS, INITIAL_RESUME, FONT_PAIRINGS, EXAMPLE_PERSONAS } from '../../constants';
-import { generateId, safeMergeResume, calculateWordCount } from '../../utils/resumeUtils';
+import { generateId, calculateWordCount } from '../../utils/resumeUtils';
 import { useResumeHistory } from '../../hooks/useResumeHistory';
-import { DebouncedInput, DebouncedTextarea } from './components/Debounced';
-import { SectionWrapper } from './components/SectionWrapper';
-import { PersonalInfoSection } from './sections/PersonalInfo';
-import { GenericList } from './sections/GenericList';
-import { SkillsSection } from './sections/SkillsSection';
+
 
 interface EditorProps {
     data: ResumeData;
@@ -585,43 +581,102 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
         </div>
     );
 
+    // Tab config for cleaner rendering
+    const TABS = [
+        { id: 'resume', label: 'Editor', Icon: FileText },
+        { id: 'tools', label: 'Ferramentas', Icon: Zap },
+        { id: 'cover', label: 'Carta', Icon: Wand2 },
+        { id: 'ats', label: 'ATS', Icon: Search },
+    ] as const;
+
     return (
-        <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-xl z-20">
-            {/* Utility Bar */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-30 shadow-sm">
-                <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
-                    <button onClick={undo} disabled={historyIndex <= 0} className="p-1.5 rounded-md hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm disabled:opacity-30 transition-all text-slate-600 dark:text-slate-300 active:scale-95" title="Desfazer (Ctrl+Z)" aria-label="Desfazer"><Undo2 size={16} /></button>
-                    <button onClick={redo} disabled={historyIndex >= history.length - 1} className="p-1.5 rounded-md hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm disabled:opacity-30 transition-all text-slate-600 dark:text-slate-300 active:scale-95" title="Refazer (Ctrl+Y)" aria-label="Refazer"><Redo2 size={16} /></button>
+        <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-20">
+
+            {/* ── Utility Bar ─────────────────────────────────────────── */}
+            <div className="flex items-center justify-between px-3 py-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 sticky top-0 z-30">
+
+                {/* Undo / Redo */}
+                <div className="flex items-center gap-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-1 shadow-sm">
+                    <button
+                        onClick={undo} disabled={historyIndex <= 0}
+                        className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-25 transition-all text-slate-600 dark:text-slate-300 active:scale-90"
+                        title="Desfazer (Ctrl+Z)" aria-label="Desfazer"
+                    >
+                        <Undo2 size={15} />
+                    </button>
+                    <div className="w-px h-4 bg-slate-200 dark:bg-slate-700" />
+                    <button
+                        onClick={redo} disabled={historyIndex >= history.length - 1}
+                        className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-25 transition-all text-slate-600 dark:text-slate-300 active:scale-90"
+                        title="Refazer (Ctrl+Y)" aria-label="Refazer"
+                    >
+                        <Redo2 size={15} />
+                    </button>
                 </div>
-                <div className="flex gap-2">
+
+                {/* Right tools */}
+                <div className="flex items-center gap-1.5">
                     <input type="file" ref={jsonInputRef} onChange={handleJsonImport} accept=".json" className="hidden" aria-label="Importar arquivo JSON" />
-                    <button onClick={() => setFocusMode(!focusMode)} className={`p-2 rounded-lg transition-colors border active:scale-95 ${focusMode ? 'bg-trampo-100 border-trampo-300 text-trampo-600' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`} title={focusMode ? "Sair do Modo Foco" : "Modo Foco (Zen)"} aria-label={focusMode ? "Sair do Modo Foco" : "Ativar Modo Foco"}>{focusMode ? <Minimize2 size={16} /> : <Maximize2 size={16} />}</button>
-                    <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
-                        <button onClick={() => jsonInputRef.current?.click()} className="p-1.5 rounded-md hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm transition-all text-slate-600 dark:text-slate-300 active:scale-95" title="Importar JSON" aria-label="Importar JSON"><Upload size={16} /></button>
-                        <button onClick={handleJsonExport} className="p-1.5 rounded-md hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm transition-all text-slate-600 dark:text-slate-300 active:scale-95" title="Exportar JSON" aria-label="Exportar JSON"><Download size={16} /></button>
+
+                    {/* Focus Mode */}
+                    <button
+                        onClick={() => setFocusMode(!focusMode)}
+                        className={`p-2 rounded-xl border transition-all active:scale-90 text-sm
+                            ${focusMode
+                                ? 'bg-trampo-500 border-trampo-400 text-white shadow-md shadow-trampo-500/30'
+                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-trampo-300 hover:text-trampo-600'
+                            }`}
+                        title={focusMode ? 'Sair do Modo Foco' : 'Modo Foco (Zen)'}
+                    >
+                        {focusMode ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+                    </button>
+
+                    {/* IO group */}
+                    <div className="flex items-center gap-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-1 shadow-sm">
+                        <button onClick={() => jsonInputRef.current?.click()} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-all text-slate-500 active:scale-90" title="Importar JSON"><Upload size={14} /></button>
+                        <button onClick={handleJsonExport} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-all text-slate-500 active:scale-90" title="Exportar JSON"><Download size={14} /></button>
                         <div className="relative">
-                            <button onClick={() => setShowExamples(!showExamples)} className="p-1.5 rounded-md hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm transition-all text-slate-600 dark:text-slate-300 active:scale-95" title="Carregar Exemplo" aria-label="Carregar exemplo de currículo"><User size={16} /></button>
+                            <button onClick={() => setShowExamples(!showExamples)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-all text-slate-500 active:scale-90" title="Exemplos de currículo"><User size={14} /></button>
                             {showExamples && (
-                                <div className="absolute top-full right-0 mt-2 bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-slate-700 rounded-lg p-1 min-w-[200px] z-50 animate-fade-in">
-                                    <div className="text-[10px] font-bold text-slate-400 p-2">PERSONAS</div>
-                                    {EXAMPLE_PERSONAS.map(ex => (<button key={ex.id} onClick={() => loadExample(ex)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md truncate transition-colors">{ex.profileName}</button>))}
+                                <div className="absolute top-full right-0 mt-2 bg-white dark:bg-slate-800 shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-slate-200 dark:border-slate-700 rounded-xl p-1.5 min-w-[180px] z-50 animate-scale-in">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 pb-1">Exemplos</div>
+                                    {EXAMPLE_PERSONAS.map(ex => (
+                                        <button key={ex.id} onClick={() => loadExample(ex)} className="w-full text-left px-3 py-2 text-xs hover:bg-trampo-50 dark:hover:bg-slate-700 hover:text-trampo-700 rounded-lg truncate transition-colors font-medium">{ex.profileName}</button>
+                                    ))}
                                 </div>
                             )}
                         </div>
                     </div>
-                    <button onClick={handleReset} className="p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors active:scale-95" title="Resetar Tudo" aria-label="Resetar currículo"><RefreshCw size={16} /></button>
+
+                    {/* Reset */}
+                    <button
+                        onClick={handleReset}
+                        className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 transition-all active:scale-90 shadow-sm"
+                        title="Resetar Tudo"
+                    >
+                        <RefreshCw size={14} />
+                    </button>
                 </div>
             </div>
 
-            <div className="flex px-4 pt-4 pb-2 gap-4 bg-white dark:bg-slate-900 select-none overflow-x-auto">
-                {['resume', 'tools', 'cover', 'ats'].map(t => (
-                    <button key={t} onClick={() => setActiveTab(t as any)} className={`flex-1 min-w-fit pb-3 text-sm font-semibold flex items-center justify-center gap-2 border-b-2 transition-all ${activeTab === t ? 'text-trampo-600 border-trampo-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}>
-                        {t === 'resume' && <><FileText size={16} /> Editor</>}
-                        {t === 'tools' && <><Zap size={16} /> Ferramentas</>}
-                        {t === 'cover' && <><Wand2 size={16} /> Carta</>}
-                        {t === 'ats' && <><Search size={16} /> ATS</>}
+            {/* ── Tab Bar ─────────────────────────────────────────────── */}
+            <div className="flex bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 px-2 pt-2 gap-1 overflow-x-auto select-none">
+                {TABS.map(({ id, label, Icon }) => (
+                    <button
+                        key={id}
+                        onClick={() => setActiveTab(id as any)}
+                        className={`flex-1 min-w-fit flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-t-xl transition-all
+                            ${activeTab === id
+                                ? 'bg-trampo-50 dark:bg-trampo-900/20 text-trampo-600 dark:text-trampo-400 border border-b-0 border-trampo-100 dark:border-trampo-900/40'
+                                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                            }`}
+                    >
+                        <Icon size={14} />
+                        {label}
+                        {activeTab === id && <span className="w-1.5 h-1.5 rounded-full bg-trampo-400 ml-0.5 animate-pulse" />}
                     </button>
-                ))}
+                ))
+                }
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 py-6 custom-scrollbar scroll-smooth">

@@ -437,42 +437,108 @@ const App: React.FC = () => {
 
               {/* AI Settings Modal */}
               {showAISettings && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200 ai-settings-modal print:hidden" onClick={handleCloseAISettings}>
-                  <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-800 p-6 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-                    <div className="flex justify-between items-center mb-6">
-                      <h3 className="font-bold text-lg flex items-center gap-2 dark:text-white"><Bot size={20} /> Configuração de IA</h3>
-                      <button onClick={handleCloseAISettings} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 transition-colors"><X size={18} /></button>
-                    </div>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Provedor</label>
-                        <div className="flex gap-2">
-                          <button onClick={() => setAiConfig({ ...aiConfig, provider: 'gemini' })} className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all active:scale-95 ${aiConfig.provider === 'gemini' ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'}`}>Google Gemini</button>
-                          <button onClick={() => setAiConfig({ ...aiConfig, provider: 'openrouter' })} className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all active:scale-95 ${aiConfig.provider === 'openrouter' ? 'bg-purple-50 border-purple-200 text-purple-700 dark:bg-purple-900/20 dark:border-purple-800 dark:text-purple-300' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'}`}>OpenRouter</button>
-                        </div>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-fade-in ai-settings-modal print:hidden" onClick={handleCloseAISettings}>
+                  <div
+                    className="bg-white dark:bg-slate-900 rounded-2xl shadow-[0_32px_80px_rgba(0,0,0,0.3)] w-full max-w-md border border-slate-200 dark:border-slate-700 overflow-hidden animate-scale-in"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    {/* Accent bar */}
+                    <div className="h-1 w-full bg-gradient-to-r from-violet-500 to-trampo-500" />
+
+                    {/* Header */}
+                    <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800">
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-trampo-600 flex items-center justify-center text-white shadow-md shadow-violet-500/30">
+                        <Bot size={18} />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold uppercase text-slate-500 mb-2">API Key {aiConfig.provider === 'gemini' ? '(Google AI Studio)' : '(OpenRouter)'}</label>
+                        <h3 className="font-bold text-base text-slate-900 dark:text-white leading-tight">Configuração de IA</h3>
+                        <p className="text-[11px] text-slate-400">Conecte seu provedor de IA preferido</p>
+                      </div>
+                      <button onClick={handleCloseAISettings} className="ml-auto p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
+                        <X size={16} />
+                      </button>
+                    </div>
+
+                    <div className="p-6 space-y-5">
+                      {/* Provider */}
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase text-slate-400 tracking-wider mb-2">Provedor</label>
+                        <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                          <button
+                            onClick={() => setAiConfig({ ...aiConfig, provider: 'gemini' })}
+                            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all active:scale-95 ${aiConfig.provider === 'gemini'
+                              ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                              : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                              }`}
+                          >
+                            ✦ Google Gemini
+                          </button>
+                          <button
+                            onClick={() => setAiConfig({ ...aiConfig, provider: 'openrouter' })}
+                            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all active:scale-95 ${aiConfig.provider === 'openrouter'
+                              ? 'bg-white dark:bg-slate-700 text-violet-600 dark:text-violet-400 shadow-sm'
+                              : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                              }`}
+                          >
+                            ⟡ OpenRouter
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* API Key */}
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase text-slate-400 tracking-wider mb-2">
+                          API Key {aiConfig.provider === 'gemini' ? '· Google AI Studio' : '· OpenRouter'}
+                        </label>
                         <div className="relative">
-                          <input type="password" value={aiConfig.apiKey} onChange={(e) => setAiConfig({ ...aiConfig, apiKey: e.target.value })} placeholder={hasEnvKey && aiConfig.provider === 'gemini' ? "Usando chave do sistema (opcional)" : "Cole sua chave aqui..."} className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-trampo-500 outline-none dark:text-white transition-all ring-offset-1 dark:ring-offset-slate-900" />
-                          <Key size={14} className="absolute left-3 top-2.5 text-slate-400" />
+                          <Key size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                          <input
+                            type="password"
+                            value={aiConfig.apiKey}
+                            onChange={(e) => setAiConfig({ ...aiConfig, apiKey: e.target.value })}
+                            placeholder={hasEnvKey && aiConfig.provider === 'gemini' ? 'Usando chave do sistema (opcional)' : 'Cole sua chave aqui...'}
+                            className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-trampo-500/30 focus:border-trampo-400 outline-none dark:text-white transition-all"
+                          />
                         </div>
-                        {hasEnvKey && aiConfig.provider === 'gemini' && !aiConfig.apiKey && <p className="text-[10px] text-green-600 dark:text-green-400 mt-1 flex items-center gap-1"><Check size={10} /> Chave de ambiente detectada.</p>}
+                        {hasEnvKey && aiConfig.provider === 'gemini' && !aiConfig.apiKey && (
+                          <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1.5 flex items-center gap-1.5">
+                            <Check size={10} /> Chave de ambiente detectada — funcionará sem configuração.
+                          </p>
+                        )}
                       </div>
+
+                      {/* Model */}
                       <div>
-                        <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Modelo</label>
-                        <input type="text" value={aiConfig.model} onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value })} placeholder={aiConfig.provider === 'gemini' ? "gemini-3-flash-preview" : "google/gemini-2.0-flash-001"} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-trampo-500 outline-none dark:text-white transition-all ring-offset-1 dark:ring-offset-slate-900" />
+                        <label className="block text-[11px] font-bold uppercase text-slate-400 tracking-wider mb-2">Modelo</label>
+                        <input
+                          type="text"
+                          value={aiConfig.model}
+                          onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value })}
+                          placeholder={aiConfig.provider === 'gemini' ? 'gemini-2.0-flash' : 'google/gemini-2.0-flash-001'}
+                          className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-trampo-500/30 focus:border-trampo-400 outline-none dark:text-white transition-all font-mono"
+                        />
                       </div>
                     </div>
-                    <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center gap-2">
-                      <button onClick={reopenOnboarding} className="text-xs text-slate-400 hover:text-trampo-600 transition-colors flex items-center gap-1" title="Ver tutorial de boas-vindas novamente">
-                        🎓 Ver Tutorial
+
+                    {/* Footer */}
+                    <div className="px-6 pb-6 pt-1 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center gap-2">
+                      <button onClick={reopenOnboarding} className="text-xs text-slate-400 hover:text-trampo-600 dark:hover:text-trampo-400 transition-colors flex items-center gap-1.5">
+                        🎓 Tutorial
                       </button>
                       <div className="flex gap-2">
-                        <button onClick={handleTestConnection} disabled={isTestingConnection} className="px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-bold transition-all active:scale-95 flex items-center gap-2 hover:bg-slate-200 dark:hover:bg-slate-700">
-                          {isTestingConnection ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />} Testar Conexão
+                        <button
+                          onClick={handleTestConnection}
+                          disabled={isTestingConnection}
+                          className="px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-semibold transition-all active:scale-95 flex items-center gap-2 hover:bg-slate-200 dark:hover:bg-slate-700"
+                        >
+                          {isTestingConnection ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />} Testar
                         </button>
-                        <button onClick={handleSaveAIConfig} className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-4 py-2 rounded-lg text-sm font-bold shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center gap-2"><Check size={16} /> Salvar</button>
+                        <button
+                          onClick={handleSaveAIConfig}
+                          className="bg-gradient-to-r from-trampo-500 to-trampo-600 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-trampo-500/25 hover:shadow-trampo-500/40 transition-all active:scale-95 flex items-center gap-2"
+                        >
+                          <Check size={15} /> Salvar
+                        </button>
                       </div>
                     </div>
                   </div>
