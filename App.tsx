@@ -5,7 +5,6 @@ import { Editor } from './components/Editor/Editor';
 import { Preview } from './components/Preview/Preview';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { Navbar } from './components/Layout/Navbar';
-import { Toast } from './components/ui/Toast';
 import { FloatingControls } from './components/Preview/FloatingControls';
 import { ResumeData, ThemeId, AIConfig } from './types';
 import { INITIAL_RESUME, THEMES, CURRENT_DATA_VERSION } from './constants';
@@ -198,18 +197,18 @@ const App: React.FC = () => {
     // #3 — UUID para evitar colisão de IDs em cliques rápidos
     const newProfile = { ...resumeData, id: crypto.randomUUID(), profileName: name, createdAt: new Date().toISOString() };
     const newProfiles = [...savedProfiles, newProfile];
-    
-    if (!checkStorageQuota('trampolin_profiles', newProfiles)) {
-        setToastMessage("❌ Armazenamento cheio! Exclua perfis antigos.");
-        return;
+    try {
+      setSavedProfiles(newProfiles);
+      localStorage.setItem('trampolin_profiles', JSON.stringify(newProfiles));
+      setResumeData(newProfile);
+      setToastMessage(`Perfil "${name}" salvo!`);
+    } catch (e) {
+      setToastMessage("❌ Armazenamento cheio! Exclua perfis antigos.");
     }
-
-    setSavedProfiles(newProfiles);
-    localStorage.setItem('trampolin_profiles', JSON.stringify(newProfiles));
-    setResumeData(newProfile);
-    setToastMessage(`Perfil "${newProfileName}" salvo!`);
-    setShowSaveProfileModal(false);
   };
+
+  // Alias para compatibilidade com Navbar que usa handleOpenSaveProfile
+  const handleOpenSaveProfile = saveProfile;
 
   const loadProfile = (profile: ResumeData) => {
     requestConfirm("Carregar Perfil?", `Deseja carregar "${profile.profileName}"?`, () => {
@@ -328,18 +327,6 @@ const App: React.FC = () => {
     }
     aiConfigDirtyRef.current = false;
     setShowAISettings(false);
-  };
-
-  const handleCloseAISettings = () => {
-      if (JSON.stringify(aiConfig) !== JSON.stringify(originalAiConfig)) {
-          requestConfirm("Alterações não salvas", "Deseja descartar as alterações nas configurações?", () => {
-              setAiConfig(originalAiConfig);
-              setShowAISettings(false);
-              closeConfirm();
-          }, 'info');
-      } else {
-          setShowAISettings(false);
-      }
   };
 
   const handleTestConnection = async () => {
@@ -464,7 +451,7 @@ const App: React.FC = () => {
         </nav>
       )}
 
-      <Navbar 
+      <Navbar
         resumeData={resumeData}
         focusMode={focusMode}
         showMobilePreview={showMobilePreview}
