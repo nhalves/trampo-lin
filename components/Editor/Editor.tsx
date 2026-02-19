@@ -181,36 +181,71 @@ const DebouncedTextarea = memo(({ value, onChange, placeholder, className, id, s
 });
 
 // Memoized Section to prevent massive re-renders
-const Section = memo(({ title, icon: Icon, children, isOpen, onToggle, isVisible, onVisibilityToggle, onClear, itemCount }: any) => (
-    <div className={`group border border-transparent rounded-xl transition-all duration-300 mb-4 ${isOpen ? 'bg-white dark:bg-slate-800 shadow-sm ring-1 ring-slate-200 dark:ring-slate-700' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
-        <div className={`flex items-center justify-between p-4 cursor-pointer select-none rounded-xl ${!isVisible && isVisible !== undefined ? 'opacity-50 grayscale' : ''}`} onClick={onToggle}>
-            <div className="flex-1 flex items-center gap-3 text-left">
-                <div className={`p-2 rounded-lg transition-colors ${isOpen ? 'bg-trampo-100 dark:bg-trampo-900/30 text-trampo-600 dark:text-trampo-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-                    {Icon && <Icon size={18} />}
+const Section = memo(({ title, icon: Icon, children, isOpen, onToggle, isVisible, onVisibilityToggle, onClear, itemCount, fillPct }: any) => (
+    <div className={`group border rounded-xl transition-all duration-300 mb-3 overflow-hidden
+        ${isOpen
+            ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-md'
+            : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:border-slate-100 dark:hover:border-slate-800'
+        }`}>
+        <div
+            className={`flex items-center justify-between px-4 py-3 cursor-pointer select-none
+                ${!isVisible && isVisible !== undefined ? 'opacity-40' : ''}`}
+            onClick={onToggle}
+        >
+            <div className="flex-1 flex items-center gap-3 text-left min-w-0">
+                <div className={`p-2 rounded-xl transition-all flex-shrink-0
+                    ${isOpen
+                        ? 'bg-trampo-500 text-white shadow-md shadow-trampo-500/30'
+                        : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 group-hover:bg-trampo-50 group-hover:text-trampo-600'
+                    }`}>
+                    {Icon && <Icon size={16} />}
                 </div>
-                <div>
+                <div className="min-w-0">
                     <span className="font-bold text-sm text-slate-700 dark:text-slate-200 block leading-tight">{title}</span>
-                    {itemCount !== undefined && <span className="text-[10px] text-slate-400 font-medium">{itemCount} itens</span>}
+                    {itemCount !== undefined && (
+                        <span className="text-[10px] text-slate-400 font-medium">
+                            {itemCount} {itemCount === 1 ? 'item' : 'itens'}
+                        </span>
+                    )}
                 </div>
             </div>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                 {onClear && (
-                    <button onClick={(e) => { e.stopPropagation(); onClear(); }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all active:scale-90" title="Limpar Seção">
-                        <Eraser size={16} />
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onClear(); }}
+                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all active:scale-90"
+                        title="Limpar Seção"
+                    >
+                        <Eraser size={14} />
                     </button>
                 )}
                 {onVisibilityToggle && (
-                    <button onClick={(e) => { e.stopPropagation(); onVisibilityToggle(); }} className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-all active:scale-90" title={isVisible ? "Ocultar" : "Mostrar"}>
-                        {isVisible ? <Eye size={18} /> : <EyeOff size={18} />}
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onVisibilityToggle(); }}
+                        className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-all active:scale-90"
+                        title={isVisible ? "Ocultar do currículo" : "Mostrar no currículo"}
+                    >
+                        {isVisible ? <Eye size={14} /> : <EyeOff size={14} />}
                     </button>
                 )}
             </div>
-            <div className={`p-2 text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
-                <ChevronDown size={20} />
+            <div className={`p-1.5 text-slate-400 transition-transform duration-300 flex-shrink-0 ml-1 ${isOpen ? 'rotate-180' : ''}`}>
+                <ChevronDown size={16} />
             </div>
         </div>
+
+        {/* Fill progress bar */}
+        {fillPct !== undefined && (
+            <div className="h-0.5 bg-slate-100 dark:bg-slate-700">
+                <div
+                    className="section-fill-bar"
+                    style={{ width: `${fillPct}%` }}
+                />
+            </div>
+        )}
+
         <div className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
-            <div className="overflow-hidden"><div className="p-4 pt-0">{children}</div></div>
+            <div className="overflow-hidden"><div className="p-4 pt-3">{children}</div></div>
         </div>
     </div>
 ));
@@ -691,18 +726,79 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                             <button onClick={() => setShowTailorModal(true)} className="px-3 py-1.5 bg-white dark:bg-slate-900 border border-trampo-200 dark:border-slate-600 rounded-lg text-xs font-bold text-trampo-700 dark:text-trampo-300 hover:shadow-md transition-all active:scale-95">🎯 Adaptar</button>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 mb-2">
-                            <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col gap-1">
-                                <span className="text-[10px] uppercase font-bold text-slate-400">Progresso</span>
-                                <div className="flex items-center gap-2"><div className="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden"><div className="bg-trampo-500 h-full rounded-full transition-all" style={{ width: `${completeness}%` }}></div></div><span className="text-xs font-bold">{completeness}%</span></div>
-                            </div>
-                            <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col gap-1">
-                                <span className="text-[10px] uppercase font-bold text-slate-400">Métricas</span>
-                                <div className="flex gap-3 text-xs text-slate-600 dark:text-slate-300"><span className="flex items-center gap-1" title="Contagem de Palavras"><Book size={12} /> {wordCount}</span><span className="flex items-center gap-1" title="Tempo de Leitura"><Timer size={12} /> ~{readingTime}min</span></div>
-                            </div>
-                        </div>
+                        {/* ── Resume Score Card Premium ─────────────── */}
+                        {(() => {
+                            const r = 30;
+                            const circ = 2 * Math.PI * r;
+                            const progress = circ - (completeness / 100) * circ;
+                            const color = completeness >= 90 ? '#10b981' : completeness >= 70 ? '#0ea5e9' : completeness >= 40 ? '#f59e0b' : '#f43f5e';
+                            const label = completeness >= 90 ? 'Excelente!' : completeness >= 70 ? 'Quase lá' : completeness >= 40 ? 'Em andamento' : 'Iniciante';
+                            const missing = [
+                                !data.personalInfo.fullName && '• Nome completo',
+                                !(data.personalInfo.summary && data.personalInfo.summary.length > 50) && '• Resumo profissional',
+                                !data.experience.length && '• Experiência',
+                                !data.education.length && '• Educação',
+                                data.skills.length < 3 && '• Pelo menos 3 skills',
+                            ].filter(Boolean) as string[];
+                            return (
+                                <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden mb-2">
+                                    <div className="flex items-center gap-4 p-4">
+                                        {/* SVG Ring */}
+                                        <div className="relative flex-shrink-0 w-[76px] h-[76px]">
+                                            <svg width="76" height="76" viewBox="0 0 76 76" className="-rotate-90">
+                                                <circle cx="38" cy="38" r={r} fill="none" stroke="#e2e8f0" strokeWidth="7" className="dark:stroke-slate-700" />
+                                                <circle
+                                                    cx="38" cy="38" r={r} fill="none"
+                                                    stroke={color} strokeWidth="7"
+                                                    strokeLinecap="round"
+                                                    strokeDasharray={circ}
+                                                    strokeDashoffset={progress}
+                                                    style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.34, 1.56, 0.64, 1), stroke 0.3s' }}
+                                                />
+                                            </svg>
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                                <span className="text-lg font-black tabular-nums" style={{ color }}>{completeness}</span>
+                                                <span className="text-[8px] font-bold text-slate-400 mt-0.5">/ 100</span>
+                                            </div>
+                                        </div>
 
-                        <Section title="Dados Pessoais" icon={User} isOpen={openSection === 'personal'} onToggle={() => toggleSection('personal')}>
+                                        {/* Text side */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="text-sm font-bold text-slate-800 dark:text-white">Força do Currículo</span>
+                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${color}20`, color }}>{label}</span>
+                                            </div>
+                                            {missing.length > 0 ? (
+                                                <div className="text-[10px] text-slate-400 space-y-0.5">
+                                                    <p className="font-semibold text-slate-500 dark:text-slate-300 mb-1">Para melhorar:</p>
+                                                    {missing.slice(0, 3).map(m => <p key={m}>{m}</p>)}
+                                                </div>
+                                            ) : (
+                                                <p className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1"><Check size={10} /> Currículo completo! 🎉</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Metrics bar */}
+                                    <div className="flex border-t border-slate-100 dark:border-slate-700 divide-x divide-slate-100 dark:divide-slate-700">
+                                        <div className="flex-1 py-2 px-3 text-center">
+                                            <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{wordCount}</p>
+                                            <p className="text-[9px] text-slate-400 uppercase tracking-wide">Palavras</p>
+                                        </div>
+                                        <div className="flex-1 py-2 px-3 text-center">
+                                            <p className="text-xs font-bold text-slate-700 dark:text-slate-200">~{readingTime}min</p>
+                                            <p className="text-[9px] text-slate-400 uppercase tracking-wide">Leitura</p>
+                                        </div>
+                                        <div className="flex-1 py-2 px-3 text-center">
+                                            <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{data.experience.length + data.education.length + data.skills.length}</p>
+                                            <p className="text-[9px] text-slate-400 uppercase tracking-wide">Itens</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
+                        <Section title="Dados Pessoais" icon={User} isOpen={openSection === 'personal'} onToggle={() => toggleSection('personal')} fillPct={[data.personalInfo.fullName, data.personalInfo.jobTitle, data.personalInfo.email, data.personalInfo.phone, data.personalInfo.summary].filter(Boolean).length / 5 * 100}>
                             <div className="flex items-center gap-5 mb-6">
                                 <div className="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden border-2 border-slate-200 dark:border-slate-700 relative group transition-all hover:border-trampo-400">
                                     {data.personalInfo.photoUrl ? <img src={data.personalInfo.photoUrl} alt={`Foto de perfil de ${data.personalInfo.fullName || 'usuário'}`} className="w-full h-full object-cover" /> : <User size={32} className="text-slate-300" />}
@@ -897,38 +993,69 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                             </button>
                         </div>
 
-                        {atsResult && (
-                            <div className="bg-white dark:bg-slate-900 p-6 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm animate-fade-in">
-                                <div className="flex items-center justify-between mb-6">
-                                    <h4 className="font-bold text-lg dark:text-white">Resultado da Análise</h4>
-                                    <div className={`text-2xl font-black ${atsResult.score >= 70 ? 'text-emerald-500' : atsResult.score >= 40 ? 'text-amber-500' : 'text-red-500'}`}>{atsResult.score}%</div>
-                                </div>
-
-                                <div className="space-y-6">
-                                    <div>
-                                        <h5 className="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><AlertTriangle size={12} /> Palavras-chave Faltantes</h5>
-                                        <div className="flex flex-wrap gap-2">
-                                            {atsResult.missingKeywords.map((k: string, i: number) => (
-                                                <span key={i} className="px-2 py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs rounded border border-red-100 dark:border-red-900/50 font-medium">{k}</span>
-                                            ))}
-                                            {atsResult.missingKeywords.length === 0 && <span className="text-xs text-green-500 font-medium">Nenhuma palavra importante faltando!</span>}
+                        {atsResult && (() => {
+                            const sc = atsResult.score;
+                            const atsColor = sc >= 70 ? '#10b981' : sc >= 40 ? '#f59e0b' : '#ef4444';
+                            const atsLabel = sc >= 70 ? 'Ótimo match!' : sc >= 40 ? 'Match parcial' : 'Match fraco';
+                            const atsR = 32;
+                            const atsCirc = 2 * Math.PI * atsR;
+                            const atsProgress = atsCirc - (sc / 100) * atsCirc;
+                            return (
+                                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm animate-bounce-in overflow-hidden">
+                                    {/* Score header */}
+                                    <div className="p-4 flex items-center gap-5 border-b border-slate-100 dark:border-slate-800">
+                                        <div className="relative flex-shrink-0 w-[84px] h-[84px]">
+                                            <svg width="84" height="84" viewBox="0 0 84 84" className="-rotate-90">
+                                                <circle cx="42" cy="42" r={atsR} fill="none" stroke="#e2e8f0" strokeWidth="8" />
+                                                <circle cx="42" cy="42" r={atsR} fill="none"
+                                                    stroke={atsColor} strokeWidth="8" strokeLinecap="round"
+                                                    strokeDasharray={atsCirc} strokeDashoffset={atsProgress}
+                                                    style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.34,1.56,0.64,1)' }} />
+                                            </svg>
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                                <span className="text-2xl font-black tabular-nums" style={{ color: atsColor }}>{sc}</span>
+                                                <span className="text-[9px] font-bold text-slate-400">/ 100</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-slate-800 dark:text-white mb-0.5">Compatibilidade com a Vaga</p>
+                                            <span className="inline-block text-xs font-bold px-2.5 py-1 rounded-full" style={{ backgroundColor: `${atsColor}18`, color: atsColor }}>{atsLabel}</span>
                                         </div>
                                     </div>
 
-                                    <div>
-                                        <h5 className="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><CheckCircle2 size={12} /> Feedback</h5>
+                                    {/* Missing keywords */}
+                                    <div className="p-4 border-b border-slate-100 dark:border-slate-800">
+                                        <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                                            <AlertTriangle size={11} className="text-amber-400" /> Palavras-chave Faltantes
+                                        </h5>
+                                        {atsResult.missingKeywords.length === 0 ? (
+                                            <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1"><CheckCircle2 size={12} /> Nenhuma palavra-chave importante faltando!</p>
+                                        ) : (
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {atsResult.missingKeywords.map((k: string, i: number) => (
+                                                    <span key={i} className="px-2.5 py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-[11px] rounded-full border border-red-100 dark:border-red-800 font-semibold">{k}</span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Feedback */}
+                                    <div className="p-4">
+                                        <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                                            <Sparkles size={11} className="text-violet-400" /> Sugestões de Melhoria
+                                        </h5>
                                         <ul className="space-y-2">
                                             {atsResult.feedback.map((f: string, i: number) => (
-                                                <li key={i} className="text-sm text-slate-600 dark:text-slate-300 flex gap-2 items-start">
-                                                    <span className="mt-1.5 w-1 h-1 rounded-full bg-slate-400 flex-shrink-0"></span>
+                                                <li key={i} className="text-xs text-slate-600 dark:text-slate-300 flex gap-2 items-start leading-relaxed">
+                                                    <span className="mt-1 w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0" />
                                                     {f}
                                                 </li>
                                             ))}
                                         </ul>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            );
+                        })()}
                     </div>
                 )}
             </div>

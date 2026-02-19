@@ -665,12 +665,26 @@ const App: React.FC = () => {
 
                 <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5" />
 
-                {/* Zoom controls */}
-                <FCtrlBtn onClick={() => setZoom(z => Math.max(z - 0.1, 0.3))} title="Diminuir Zoom"><ZoomOut size={16} /></FCtrlBtn>
-                <span className="text-xs font-bold w-11 text-center tabular-nums text-slate-600 dark:text-slate-300 select-none px-1">
-                  {Math.round(zoom * 100)}%
-                </span>
-                <FCtrlBtn onClick={() => setZoom(z => Math.min(z + 0.1, 1.5))} title="Aumentar Zoom"><ZoomIn size={16} /></FCtrlBtn>
+                {/* Zoom controls - slider */}
+                <FCtrlBtn onClick={() => setZoom(z => Math.max(z - 0.1, 0.3))} title="Diminuir Zoom">
+                  <ZoomOut size={15} />
+                </FCtrlBtn>
+                <div className="flex items-center gap-1.5 px-1">
+                  <input
+                    type="range"
+                    min="30" max="150" step="5"
+                    value={Math.round(zoom * 100)}
+                    onChange={e => setZoom(Number(e.target.value) / 100)}
+                    className="w-20"
+                    title={`Zoom: ${Math.round(zoom * 100)}%`}
+                  />
+                  <span className="text-[10px] font-bold w-8 text-center tabular-nums text-slate-500 dark:text-slate-400 select-none">
+                    {Math.round(zoom * 100)}%
+                  </span>
+                </div>
+                <FCtrlBtn onClick={() => setZoom(z => Math.min(z + 0.1, 1.5))} title="Aumentar Zoom">
+                  <ZoomIn size={15} />
+                </FCtrlBtn>
 
                 <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5" />
 
