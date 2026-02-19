@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { JobApplication, JobStatus } from '../../types';
 import { Plus, Trash2, Calendar, Building, Search, Clock, Ghost, Check, X } from 'lucide-react';
@@ -51,12 +50,25 @@ export const JobTracker: React.FC<JobTrackerProps> = ({ onClose }) => {
     const handleDrop = (e: React.DragEvent, status: JobStatus) => { e.preventDefault(); if (!draggedJob) return; const updated = jobs.map(j => j.id === draggedJob ? { ...j, status } : j); saveJobs(updated); setDraggedJob(null); };
 
     const getDaysAgo = (dateStr: string) => {
-        try { return formatDistanceToNow(parseISO(dateStr), { addSuffix: true, locale: ptBR }); } catch { return 'Recentemente'; }
+        try {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diffInSeconds = Math.max(0, Math.floor((now.getTime() - date.getTime()) / 1000));
+            
+            if (diffInSeconds < 60) return 'agora';
+            if (diffInSeconds < 3600) return `há ${Math.floor(diffInSeconds / 60)} min`;
+            if (diffInSeconds < 86400) return `há ${Math.floor(diffInSeconds / 3600)} h`;
+            if (diffInSeconds < 2592000) return `há ${Math.floor(diffInSeconds / 86400)} dias`;
+            if (diffInSeconds < 31536000) return `há ${Math.floor(diffInSeconds / 2592000)} meses`;
+            return `há ${Math.floor(diffInSeconds / 31536000)} anos`;
+        } catch {
+            return 'Recentemente';
+        }
     };
 
     return (
         <div className="fixed inset-0 z-50 bg-white/50 dark:bg-black/50 backdrop-blur-sm flex flex-col job-tracker-modal animate-fade-in" onClick={onClose}>
-            <div className="bg-white dark:bg-slate-950 flex flex-col h-[90vh] w-[95vw] max-w-7xl mx-auto mt-8 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div ref={modalRef} className="bg-white dark:bg-slate-950 flex flex-col h-[90vh] w-[95vw] max-w-7xl mx-auto mt-8 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-scale-in" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" tabIndex={-1}>
                 {/* Header */}
                 <div className="h-16 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 bg-white dark:bg-slate-900">
                     <div>

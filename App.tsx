@@ -4,8 +4,11 @@ import { createPortal } from 'react-dom';
 import { Editor } from './components/Editor/Editor';
 import { Preview } from './components/Preview/Preview';
 import { ConfirmDialog } from './components/ConfirmDialog';
+import { Navbar } from './components/Layout/Navbar';
+import { Toast } from './components/ui/Toast';
+import { FloatingControls } from './components/Preview/FloatingControls';
 import { ResumeData, ThemeId, AIConfig } from './types';
-import { INITIAL_RESUME, THEMES } from './constants';
+import { INITIAL_RESUME, THEMES, CURRENT_DATA_VERSION } from './constants';
 import { getAIConfig, saveAIConfig, validateConnection } from './services/geminiService';
 import { Printer, Download, Upload, RotateCcw, Palette, Layout, Moon, Sun, Save, FileText, ZoomIn, ZoomOut, UserPlus, Menu, Eye, EyeOff, FileType, Bot, Settings2, Check, X, AlertCircle, Monitor, ChevronRight, Maximize, Briefcase, Key, Linkedin, Minimize2, Edit2, Loader2, RefreshCw, ShieldOff } from 'lucide-react';
 import { JobTracker } from './components/JobTracker/JobTracker';
@@ -46,6 +49,7 @@ const App: React.FC = () => {
   // AI Settings State
   const [showAISettings, setShowAISettings] = useState(false);
   const [aiConfig, setAiConfig] = useState<AIConfig>(getAIConfig());
+  const [originalAiConfig, setOriginalAiConfig] = useState<AIConfig>(getAIConfig());
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const hasEnvKey = !!process.env.API_KEY && process.env.API_KEY.length > 0;
 
@@ -64,7 +68,6 @@ const App: React.FC = () => {
     onConfirm: () => { },
   });
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   // AI Settings dirty-check: track if user changed config without saving
   const aiConfigDirtyRef = useRef(false);
@@ -112,6 +115,7 @@ const App: React.FC = () => {
 
     handleAutoFit();
     setAiConfig(getAIConfig());
+    setOriginalAiConfig(getAIConfig());
   }, []);
 
   useEffect(() => {
@@ -126,13 +130,11 @@ const App: React.FC = () => {
   // Handle Window Resize for AutoFit (no-op handler removed)
   // useEffect(() => { ... }, []);
 
-  // Save Logic & Title Update
   useEffect(() => {
     localStorage.setItem('trampolin_data', JSON.stringify({ version: RESUME_DATA_VERSION, data: resumeData }));
     document.title = resumeData.personalInfo.fullName ? `Editando: ${resumeData.personalInfo.fullName}` : 'Trampo-lin | Editor';
   }, [resumeData]);
 
-  // Printing Lifecycle
   useEffect(() => {
     if (isPrinting) {
       // Pequeno delay para garantir que o Portal foi renderizado no DOM
@@ -153,7 +155,6 @@ const App: React.FC = () => {
     }
   }, [isPrinting, resumeData]);
 
-  // Global Shortcuts
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
@@ -197,10 +198,17 @@ const App: React.FC = () => {
     // #3 — UUID para evitar colisão de IDs em cliques rápidos
     const newProfile = { ...resumeData, id: crypto.randomUUID(), profileName: name, createdAt: new Date().toISOString() };
     const newProfiles = [...savedProfiles, newProfile];
+    
+    if (!checkStorageQuota('trampolin_profiles', newProfiles)) {
+        setToastMessage("❌ Armazenamento cheio! Exclua perfis antigos.");
+        return;
+    }
+
     setSavedProfiles(newProfiles);
     localStorage.setItem('trampolin_profiles', JSON.stringify(newProfiles));
     setResumeData(newProfile);
-    setToastMessage(`Perfil "${name}" salvo!`);
+    setToastMessage(`Perfil "${newProfileName}" salvo!`);
+    setShowSaveProfileModal(false);
   };
 
   const loadProfile = (profile: ResumeData) => {
@@ -320,6 +328,18 @@ const App: React.FC = () => {
     }
     aiConfigDirtyRef.current = false;
     setShowAISettings(false);
+  };
+
+  const handleCloseAISettings = () => {
+      if (JSON.stringify(aiConfig) !== JSON.stringify(originalAiConfig)) {
+          requestConfirm("Alterações não salvas", "Deseja descartar as alterações nas configurações?", () => {
+              setAiConfig(originalAiConfig);
+              setShowAISettings(false);
+              closeConfirm();
+          }, 'info');
+      } else {
+          setShowAISettings(false);
+      }
   };
 
   const handleTestConnection = async () => {
@@ -444,7 +464,31 @@ const App: React.FC = () => {
         </nav>
       )}
 
-      {/* Main Layout */}
+      <Navbar 
+        resumeData={resumeData}
+        focusMode={focusMode}
+        showMobilePreview={showMobilePreview}
+        setShowMobilePreview={setShowMobilePreview}
+        setShowJobTracker={setShowJobTracker}
+        setShowLinkedinGenerator={setShowLinkedinGenerator}
+        setShowAISettings={setShowAISettings}
+        showProfileMenu={showProfileMenu}
+        setShowProfileMenu={setShowProfileMenu}
+        handleOpenSaveProfile={handleOpenSaveProfile}
+        savedProfiles={savedProfiles}
+        loadProfile={loadProfile}
+        deleteProfile={deleteProfile}
+        togglePrivacyMode={togglePrivacyMode}
+        toggleDarkMode={toggleDarkMode}
+        darkMode={darkMode}
+        setShowOnboarding={setShowOnboarding}
+        previewMode={previewMode}
+        setPreviewMode={setPreviewMode}
+        showThemeSelector={showThemeSelector}
+        setShowThemeSelector={setShowThemeSelector}
+        setIsPrinting={setIsPrinting}
+      />
+
       <main className="flex-1 flex overflow-hidden relative">
         <div id="editor-sidebar" className={`${focusMode ? 'w-full max-w-3xl mx-auto border-x' : 'w-full md:w-[480px] lg:w-[520px]'} bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 h-full overflow-hidden z-10 flex-shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-all duration-300 absolute md:relative ${showMobilePreview && !focusMode ? '-translate-x-full md:translate-x-0' : 'translate-x-0'}`}>
           <Editor
@@ -547,7 +591,6 @@ const App: React.FC = () => {
 
       <ConfirmDialog isOpen={confirmConfig.isOpen} title={confirmConfig.title} message={confirmConfig.message} onConfirm={() => { confirmConfig.onConfirm(); closeConfirm(); }} onCancel={closeConfirm} type={confirmConfig.type} />
 
-      {/* PORTAL DE IMPRESSÃO - Renderiza apenas durante a impressão em um nó DOM isolado */}
       {isPrinting && document.getElementById('print-mount') && createPortal(
         <div className="bg-white">
           <div

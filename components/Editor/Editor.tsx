@@ -5,6 +5,13 @@ import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Wand2, Eye, EyeOff, Arr
 import { improveText, generateSummary, suggestSkills, generateCoverLetter, analyzeJobMatch, translateText, translateResumeData, generateBulletPoints, extractResumeFromPdf, generateInterviewQuestions, generateLinkedinHeadline, tailorResume, analyzeGap, estimateSalary, analyzePhoto } from '../../services/geminiService';
 import { fetchGithubRepos, extractDominantColor } from '../../services/integrationService';
 import { AVAILABLE_FONTS, INITIAL_RESUME, FONT_PAIRINGS, EXAMPLE_PERSONAS } from '../../constants';
+import { generateId, safeMergeResume, calculateWordCount } from '../../utils/resumeUtils';
+import { useResumeHistory } from '../../hooks/useResumeHistory';
+import { DebouncedInput, DebouncedTextarea } from './components/Debounced';
+import { SectionWrapper } from './components/SectionWrapper';
+import { PersonalInfoSection } from './sections/PersonalInfo';
+import { GenericList } from './sections/GenericList';
+import { SkillsSection } from './sections/SkillsSection';
 
 interface EditorProps {
     data: ResumeData;

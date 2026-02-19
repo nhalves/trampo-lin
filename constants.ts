@@ -1,6 +1,8 @@
 
 import { ResumeData, ThemeConfig } from './types';
 
+export const CURRENT_DATA_VERSION = 2;
+
 export const INITIAL_RESUME: ResumeData = {
   id: 'default',
   profileName: 'Meu Currículo Principal',
