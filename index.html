@@ -1,137 +1,215 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR" class="scroll-smooth">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Trampo-lin | Criador de Currículos</title>
-    <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#0ea5e9" />
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-              serif: ['Merriweather', 'serif'],
-              mono: ['Roboto Mono', 'monospace'],
-              display: ['Poppins', 'sans-serif'],
-              lato: ['Lato', 'sans-serif'],
-              open: ['Open Sans', 'sans-serif'],
-              montserrat: ['Montserrat', 'sans-serif'],
-              raleway: ['Raleway', 'sans-serif'],
-              oswald: ['Oswald', 'sans-serif'],
-              playfair: ['Playfair Display', 'serif'],
-              dyslexic: ['Comic Neue', 'cursive'], 
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trampo-lin | Criador de Currículos</title>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0ea5e9" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            serif: ['Merriweather', 'serif'],
+            mono: ['Roboto Mono', 'monospace'],
+            display: ['Poppins', 'sans-serif'],
+            lato: ['Lato', 'sans-serif'],
+            open: ['Open Sans', 'sans-serif'],
+            montserrat: ['Montserrat', 'sans-serif'],
+            raleway: ['Raleway', 'sans-serif'],
+            oswald: ['Oswald', 'sans-serif'],
+            playfair: ['Playfair Display', 'serif'],
+            dyslexic: ['Comic Neue', 'cursive'],
+          },
+          colors: {
+            trampo: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              200: '#bae6fd',
+              300: '#7dd3fc',
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              800: '#075985',
+              900: '#0c4a6e',
             },
-            colors: {
-              trampo: {
-                50: '#f0f9ff',
-                100: '#e0f2fe',
-                200: '#bae6fd',
-                300: '#7dd3fc',
-                400: '#38bdf8',
-                500: '#0ea5e9',
-                600: '#0284c7',
-                700: '#0369a1',
-                800: '#075985',
-                900: '#0c4a6e',
-              },
+          },
+          animation: {
+            'slide-in': 'slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            'slide-up': 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            'fade-in': 'fadeIn 0.25s ease-out forwards',
+            'scale-in': 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            'float': 'float 3s ease-in-out infinite',
+            'shimmer': 'shimmer 2s linear infinite',
+            'pulse-ring': 'pulseRing 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite',
+          },
+          keyframes: {
+            slideIn: {
+              '0%': { transform: 'translateY(16px)', opacity: '0' },
+              '100%': { transform: 'translateY(0)', opacity: '1' },
             },
-            animation: {
-              'slide-in': 'slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-              'fade-in': 'fadeIn 0.2s ease-out forwards',
-              'scale-in': 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            slideUp: {
+              '0%': { transform: 'translateY(8px)', opacity: '0' },
+              '100%': { transform: 'translateY(0)', opacity: '1' },
             },
-            keyframes: {
-              slideIn: {
-                '0%': { transform: 'translateY(20px)', opacity: '0' },
-                '100%': { transform: 'translateY(0)', opacity: '1' },
-              },
-              fadeIn: {
-                '0%': { opacity: '0' },
-                '100%': { opacity: '1' },
-              },
-              scaleIn: {
-                '0%': { transform: 'scale(0.95)', opacity: '0' },
-                '100%': { transform: 'scale(1)', opacity: '1' },
-              }
-            }
+            fadeIn: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
+            },
+            scaleIn: {
+              '0%': { transform: 'scale(0.94)', opacity: '0' },
+              '100%': { transform: 'scale(1)', opacity: '1' },
+            },
+            float: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-6px)' },
+            },
+            shimmer: {
+              '0%': { backgroundPosition: '-200% 0' },
+              '100%': { backgroundPosition: '200% 0' },
+            },
+            pulseRing: {
+              '0%': { transform: 'scale(0.8)', opacity: '1' },
+              '80%, 100%': { transform: 'scale(2)', opacity: '0' },
+            },
           }
         }
       }
-    </script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:wght@300;400;700&family=Roboto+Mono:wght@400;500&family=Poppins:wght@400;600;700&family=Lato:wght@400;700&family=Open+Sans:wght@400;600&family=Montserrat:wght@400;600;700&family=Raleway:wght@400;600&family=Oswald:wght@400;500;700&family=Playfair+Display:wght@400;600;700&family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
-    
-    <style>
-      /* --- 1. Scrollbar Premium --- */
-      ::-webkit-scrollbar { width: 6px; height: 6px; }
-      ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-      ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-      .dark ::-webkit-scrollbar-thumb { background: #334155; }
-      .dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
-      
-      /* --- 3. Brand Selection --- */
-      ::selection { background-color: rgba(14, 165, 233, 0.3); color: #0c4a6e; }
-      .dark ::selection { background-color: rgba(14, 165, 233, 0.4); color: #fff; }
+    }
+  </script>
 
-      /* --- 16. Input Auto-fill fix for dark mode --- */
-      input:-webkit-autofill,
-      input:-webkit-autofill:hover, 
-      input:-webkit-autofill:focus, 
-      input:-webkit-autofill:active{
-          -webkit-box-shadow: 0 0 0 30px #f8fafc inset !important;
-          transition: background-color 5000s ease-in-out 0s;
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:wght@300;400;700&family=Roboto+Mono:wght@400;500&family=Poppins:wght@400;600;700&family=Lato:wght@400;700&family=Open+Sans:wght@400;600&family=Montserrat:wght@400;600;700&family=Raleway:wght@400;600&family=Oswald:wght@400;500;700&family=Playfair+Display:wght@400;600;700&family=Comic+Neue:wght@400;700&display=swap"
+    rel="stylesheet">
+
+  <style>
+    /* --- 1. Scrollbar Premium --- */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    .dark ::-webkit-scrollbar-thumb {
+      background: #334155;
+    }
+
+    .dark ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+
+    /* --- 3. Brand Selection --- */
+    ::selection {
+      background-color: rgba(14, 165, 233, 0.3);
+      color: #0c4a6e;
+    }
+
+    .dark ::selection {
+      background-color: rgba(14, 165, 233, 0.4);
+      color: #fff;
+    }
+
+    /* --- 16. Input Auto-fill fix for dark mode --- */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus,
+    input:-webkit-autofill:active {
+      -webkit-box-shadow: 0 0 0 30px #f8fafc inset !important;
+      transition: background-color 5000s ease-in-out 0s;
+    }
+
+    .dark input:-webkit-autofill,
+    .dark input:-webkit-autofill:hover,
+    .dark input:-webkit-autofill:focus,
+    .dark input:-webkit-autofill:active {
+      -webkit-box-shadow: 0 0 0 30px #0f172a inset !important;
+      -webkit-text-fill-color: white !important;
+    }
+
+    /* --- Custom: Preview area dot grid background --- */
+    .preview-bg-pattern {
+      background-color: #f1f5f9;
+      background-image: radial-gradient(circle, #cbd5e1 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+
+    .dark .preview-bg-pattern {
+      background-color: #020617;
+      background-image: radial-gradient(circle, #1e293b 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+
+    /* --- Custom: Glassmorphism panel --- */
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .dark .glass-panel {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    /* --- 8. SISTEMA DE IMPRESSÃO VIA PORTAL --- */
+    /* Este CSS trabalha em conjunto com o createPortal do React */
+    @media print {
+      @page {
+        margin: 0;
+        size: auto;
       }
-      .dark input:-webkit-autofill,
-      .dark input:-webkit-autofill:hover, 
-      .dark input:-webkit-autofill:focus, 
-      .dark input:-webkit-autofill:active{
-          -webkit-box-shadow: 0 0 0 30px #0f172a inset !important;
-          -webkit-text-fill-color: white !important;
+
+      /* Oculta TODA a aplicação principal */
+      body>*:not(#print-mount) {
+        display: none !important;
       }
 
-      /* --- 8. SISTEMA DE IMPRESSÃO VIA PORTAL --- */
-      /* Este CSS trabalha em conjunto com o createPortal do React */
-      @media print {
-        @page { margin: 0; size: auto; }
-        
-        /* Oculta TODA a aplicação principal */
-        body > *:not(#print-mount) {
-            display: none !important;
-        }
-
-        /* Reseta o Body */
-        body {
-            background-color: white !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: visible !important;
-        }
-
-        /* Exibe e posiciona o Container de Impressão */
-        #print-mount {
-            display: block !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: auto !important;
-            z-index: 99999 !important;
-        }
-
-        #print-mount * {
-            visibility: visible !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }
+      /* Reseta o Body */
+      body {
+        background-color: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
       }
-    </style>
+
+      /* Exibe e posiciona o Container de Impressão */
+      #print-mount {
+        display: block !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        z-index: 99999 !important;
+      }
+
+      #print-mount * {
+        visibility: visible !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    }
+  </style>
   <script type="importmap">
 {
   "imports": {
@@ -149,10 +227,12 @@
 }
 </script>
 </head>
-  <body class="bg-slate-50 dark:bg-slate-900 transition-colors duration-300 antialiased">
-    <div id="root"></div>
-    <!-- Portal de Impressão: Isolado da árvore principal -->
-    <div id="print-mount"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+
+<body class="bg-slate-50 dark:bg-slate-900 transition-colors duration-300 antialiased">
+  <div id="root"></div>
+  <!-- Portal de Impressão: Isolado da árvore principal -->
+  <div id="print-mount"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
 </html>

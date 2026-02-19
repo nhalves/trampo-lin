@@ -5,7 +5,6 @@ import { Editor } from './components/Editor/Editor';
 import { Preview } from './components/Preview/Preview';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { Navbar } from './components/Layout/Navbar';
-import { FloatingControls } from './components/Preview/FloatingControls';
 import { ResumeData, ThemeId, AIConfig } from './types';
 import { INITIAL_RESUME, THEMES, CURRENT_DATA_VERSION } from './constants';
 import { getAIConfig, saveAIConfig, validateConnection } from './services/geminiService';
@@ -19,6 +18,19 @@ const Toast = ({ message, onClose }: { message: string, onClose: () => void }) =
   useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]);
   return <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-md text-white px-6 py-3 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] text-sm font-medium z-[150] animate-slide-in flex items-center gap-2 border border-slate-700/50 transform transition-all hover:scale-105 cursor-default">{message}</div>;
 };
+
+// Helper: Floating control button
+const FCtrlBtn: React.FC<{ onClick: () => void; title: string; children: React.ReactNode }> = ({ onClick, title, children }) => (
+  <button
+    onClick={onClick}
+    title={title}
+    className="p-2 rounded-xl text-slate-600 dark:text-slate-300
+               hover:bg-slate-100/80 dark:hover:bg-slate-700/80
+               transition-all active:scale-90"
+  >
+    {children}
+  </button>
+);
 
 // localStorage versioning — bump this when ResumeData schema changes
 const RESUME_DATA_VERSION = 2;
@@ -419,9 +431,7 @@ const App: React.FC = () => {
         </div>
 
         {!focusMode && (
-          <div id="preview-area" className={`flex-1 bg-slate-100/50 dark:bg-slate-950 overflow-hidden relative flex flex-col items-center justify-center w-full absolute md:relative h-full transition-transform duration-300 ${showMobilePreview ? 'translate-x-0 z-20 bg-white' : 'translate-x-full md:translate-x-0'}`}>
-
-            <div className="absolute inset-0 z-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none print:hidden" style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
+          <div id="preview-area" className={`flex-1 preview-bg-pattern overflow-hidden relative flex flex-col items-center justify-center w-full absolute md:relative h-full transition-transform duration-300 print:hidden ${showMobilePreview ? 'translate-x-0 z-20' : 'translate-x-full md:translate-x-0'}`}>
 
             <div id="preview-scroll-container" ref={previewContainerRef} className="w-full h-full overflow-auto flex items-start justify-center p-4 md:p-12 custom-scrollbar relative z-10 pb-24">
 
@@ -475,30 +485,54 @@ const App: React.FC = () => {
 
               {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
 
-              {/* VISUALIZAÇÃO DO EDITOR (COM ZOOM E SCROLL) */}
+              {/* Paper shadow */}
               <div
                 id="resume-paper"
                 data-size={resumeData.settings.paperSize}
-                className={`relative flex-shrink-0 bg-white shadow-2xl transition-transform duration-200 origin-top`}
-                style={{ width: resumeData.settings.paperSize === 'letter' ? '215.9mm' : '210mm', minHeight: resumeData.settings.paperSize === 'letter' ? '279.4mm' : '297mm', transform: `scale(${zoom})` }}
+                className="relative flex-shrink-0 bg-white origin-top transition-transform duration-200"
+                style={{
+                  width: resumeData.settings.paperSize === 'letter' ? '215.9mm' : '210mm',
+                  minHeight: resumeData.settings.paperSize === 'letter' ? '279.4mm' : '297mm',
+                  transform: `scale(${zoom})`,
+                  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.07), 0 20px 60px -8px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.04)',
+                }}
               >
                 <Preview data={resumeData} theme={THEMES.find(t => t.id === activeThemeId) || THEMES[0]} mode={previewMode} />
               </div>
             </div>
 
-            {/* Floating Controls (Glassmorphism + Tooltips) */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-2 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-white/20 dark:border-slate-700/50 print:hidden z-40 preview-controls transition-all hover:scale-[1.02]">
-              <button onClick={handleTxtExport} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-colors active:scale-95" title="Exportar TXT completo"><FileType size={18} /></button>
-              <button onClick={handleDocxExport} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-colors active:scale-95" title="Exportar HTML para Word (.doc)"><FileText size={18} /></button>
-              <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
-              <button onClick={() => setZoom(z => Math.max(z - 0.1, 0.3))} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-colors active:scale-95" title="Diminuir Zoom"><ZoomOut size={18} /></button>
-              <span className="text-xs font-bold w-12 text-center tabular-nums text-slate-600 dark:text-slate-300 select-none">{Math.round(zoom * 100)}%</span>
-              <button onClick={() => setZoom(z => Math.min(z + 0.1, 1.5))} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-colors active:scale-95" title="Aumentar Zoom"><ZoomIn size={18} /></button>
-              <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
-              <button onClick={handleAutoFit} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-colors active:scale-95" title="Ajustar à Tela (Fit)"><Maximize size={16} /></button>
-              <button onClick={() => setZoom(window.innerWidth < 768 ? 0.45 : 0.8)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-colors active:scale-95" title="Resetar"><RotateCcw size={16} /></button>
-              <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 md:hidden"></div>
-              <button onClick={() => setIsPrinting(true)} className="md:hidden p-2 bg-slate-900 text-white rounded-xl shadow-lg active:scale-95"><Printer size={18} /></button>
+            {/* ── Floating Controls ─────────────────────────────────── */}
+            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 print:hidden z-40">
+              <div className="glass-panel flex items-center gap-1 p-1.5 rounded-2xl
+                             shadow-[0_8px_32px_rgba(0,0,0,0.14),0_2px_8px_rgba(0,0,0,0.08)]
+                             transition-all duration-300 hover:shadow-[0_12px_40px_rgba(0,0,0,0.18)]">
+                {/* Export buttons */}
+                <FCtrlBtn onClick={handleTxtExport} title="Exportar TXT"><FileType size={16} /></FCtrlBtn>
+                <FCtrlBtn onClick={handleDocxExport} title="Exportar Word (.doc)"><FileText size={16} /></FCtrlBtn>
+
+                <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5" />
+
+                {/* Zoom controls */}
+                <FCtrlBtn onClick={() => setZoom(z => Math.max(z - 0.1, 0.3))} title="Diminuir Zoom"><ZoomOut size={16} /></FCtrlBtn>
+                <span className="text-xs font-bold w-11 text-center tabular-nums text-slate-600 dark:text-slate-300 select-none px-1">
+                  {Math.round(zoom * 100)}%
+                </span>
+                <FCtrlBtn onClick={() => setZoom(z => Math.min(z + 0.1, 1.5))} title="Aumentar Zoom"><ZoomIn size={16} /></FCtrlBtn>
+
+                <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5" />
+
+                <FCtrlBtn onClick={handleAutoFit} title="Ajustar à tela (Fit)"><Maximize size={15} /></FCtrlBtn>
+                <FCtrlBtn onClick={() => setZoom(window.innerWidth < 768 ? 0.45 : 0.8)} title="Resetar zoom"><RotateCcw size={15} /></FCtrlBtn>
+
+                {/* Mobile PDF button */}
+                <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 md:hidden" />
+                <button
+                  onClick={() => setIsPrinting(true)}
+                  className="md:hidden p-2 bg-gradient-to-b from-slate-800 to-slate-900 text-white rounded-xl shadow-md active:scale-95 transition-all"
+                >
+                  <Printer size={16} />
+                </button>
+              </div>
             </div>
           </div>
         )}
