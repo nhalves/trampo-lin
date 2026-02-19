@@ -418,6 +418,93 @@ const App: React.FC = () => {
         setIsPrinting={setIsPrinting}
       />
 
+      {/* ── Theme Selector Panel ──────────────────────────────────── */}
+      {showThemeSelector && (
+        <div
+          className="fixed inset-0 z-[80] print:hidden"
+          onClick={() => setShowThemeSelector(false)}
+        >
+          <div
+            className="absolute top-[68px] right-4 w-[320px] animate-scale-in"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700
+                            shadow-[0_16px_48px_rgba(0,0,0,0.18),0_4px_12px_rgba(0,0,0,0.08)]
+                            dark:shadow-[0_16px_48px_rgba(0,0,0,0.5)] overflow-hidden">
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500 to-trampo-500 flex items-center justify-center">
+                    <Palette size={12} className="text-white" />
+                  </div>
+                  <span className="text-sm font-bold text-slate-800 dark:text-white">Tema do Currículo</span>
+                </div>
+                <button
+                  onClick={() => setShowThemeSelector(false)}
+                  className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+
+              {/* Theme grid */}
+              <div className="p-3 grid grid-cols-1 gap-1.5 max-h-[420px] overflow-y-auto custom-scrollbar">
+                {THEMES.map(theme => {
+                  const isActive = activeThemeId === theme.id;
+                  return (
+                    <button
+                      key={theme.id}
+                      onClick={() => {
+                        setActiveThemeId(theme.id as ThemeId);
+                        setToastMessage(`✨ Tema "${theme.name}" aplicado!`);
+                        setShowThemeSelector(false);
+                      }}
+                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-all active:scale-[0.98]
+                        ${isActive
+                          ? 'bg-violet-50 dark:bg-violet-900/20 ring-1 ring-violet-300 dark:ring-violet-700'
+                          : 'hover:bg-slate-50 dark:hover:bg-slate-800'
+                        }`}
+                    >
+                      {/* Color swatches */}
+                      <div className="flex-shrink-0 flex gap-0.5">
+                        {[theme.colors.primary, theme.colors.accent, theme.colors.bg === '#ffffff' ? '#f1f5f9' : theme.colors.bg].map((color, i) => (
+                          <div
+                            key={i}
+                            className="w-4 h-9 rounded-md border border-black/[0.06]"
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-800 dark:text-white">{theme.name}</span>
+                          {isActive && (
+                            <span className="text-[10px] font-bold text-violet-600 dark:text-violet-400 bg-violet-100 dark:bg-violet-900/30 px-1.5 py-0.5 rounded-full">Ativo</span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-slate-400 leading-tight mt-0.5 truncate">{theme.description}</p>
+                      </div>
+
+                      {/* Check */}
+                      {isActive && (
+                        <Check size={14} className="flex-shrink-0 text-violet-500" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-800 text-center">
+                <span className="text-[10px] text-slate-400">{THEMES.length} temas disponíveis</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="flex-1 flex overflow-hidden relative">
         <div id="editor-sidebar" className={`${focusMode ? 'w-full max-w-3xl mx-auto border-x' : 'w-full md:w-[480px] lg:w-[520px]'} bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 h-full overflow-hidden z-10 flex-shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-all duration-300 absolute md:relative ${showMobilePreview && !focusMode ? '-translate-x-full md:translate-x-0' : 'translate-x-0'}`}>
           <Editor
