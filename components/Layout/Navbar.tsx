@@ -52,7 +52,10 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
           <span className="absolute inset-0 flex items-center justify-center text-white font-black text-base leading-none">T</span>
         </div>
         <div className="hidden md:flex flex-col leading-none">
-          <span className="font-display font-bold text-[15px] tracking-tight text-slate-900 dark:text-white">Trampo-lin</span>
+          <div className="flex items-center gap-1.5">
+            <span className="font-display font-bold text-[15px] tracking-tight text-slate-900 dark:text-white">Trampo-lin</span>
+            <span className="px-1.5 py-0.5 rounded-md bg-trampo-100 dark:bg-trampo-900/30 text-[9px] font-bold text-trampo-700 dark:text-trampo-300">v4.0</span>
+          </div>
           <span className="text-[10px] text-trampo-500 font-semibold tracking-wider uppercase">Currículo Pro</span>
         </div>
       </div>

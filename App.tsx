@@ -89,7 +89,6 @@ const App: React.FC = () => {
   const [showLinkedinGenerator, setShowLinkedinGenerator] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  // ── v4 Feature States ──────────────────────────────────────────────────────
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [cmdQuery, setCmdQuery] = useState('');
   const [earnedBadges, setEarnedBadges] = useState<string[]>([]);
