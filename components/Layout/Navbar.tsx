@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Edit2, Eye, Briefcase, Bot, UserPlus, Save, Trash2, EyeOff, Sun, Moon, HelpCircle, Palette, Printer, ChevronDown, LinkedinIcon } from 'lucide-react';
+import { Edit2, Eye, Briefcase, Bot, UserPlus, Save, Trash2, EyeOff, Sun, Moon, HelpCircle, Palette, Printer, ChevronDown, LinkedinIcon, Share2, Trophy, Command } from 'lucide-react';
 import { ResumeData } from '../../types';
 
 interface NavbarProps {
@@ -26,6 +26,11 @@ interface NavbarProps {
   showThemeSelector: boolean;
   setShowThemeSelector: (v: boolean) => void;
   setIsPrinting: (v: boolean) => void;
+  // v4 optional props
+  onShare?: () => void;
+  onShowBadges?: () => void;
+  onOpenCommandPalette?: () => void;
+  earnedBadgesCount?: number;
 }
 
 export const Navbar: React.FC<NavbarProps> = (props) => {
@@ -99,6 +104,47 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
           icon={<Briefcase size={16} />}
           className="hidden sm:flex"
         />
+
+        {/* Compartilhar */}
+        {props.onShare && (
+          <button
+            aria-label="Compartilhar currículo"
+            title="Gerar link de compartilhamento"
+            onClick={props.onShare}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-sky-50 text-sky-600 hover:bg-sky-100 dark:bg-sky-900/20 dark:text-sky-400 dark:hover:bg-sky-900/40 transition-all active:scale-95"
+          >
+            <Share2 size={14} /> Compartilhar
+          </button>
+        )}
+
+        {/* Conquistas (Badges) */}
+        {props.onShowBadges && (
+          <button
+            aria-label="Minhas conquistas"
+            title="Ver conquistas desbloqueadas"
+            onClick={props.onShowBadges}
+            className="relative p-2 rounded-xl text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all active:scale-95"
+          >
+            <Trophy size={18} />
+            {(props.earnedBadgesCount ?? 0) > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-amber-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                {props.earnedBadgesCount}
+              </span>
+            )}
+          </button>
+        )}
+
+        {/* Command Palette */}
+        {props.onOpenCommandPalette && (
+          <button
+            aria-label="Paleta de comandos"
+            title="Abrir paleta de comandos (⌘K)"
+            onClick={props.onOpenCommandPalette}
+            className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium transition-all active:scale-95 border border-slate-200 dark:border-slate-700"
+          >
+            <Command size={13} /> <span className="text-[10px]">K</span>
+          </button>
+        )}
 
         {/* LinkedIn */}
         <NavBtn

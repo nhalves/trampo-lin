@@ -935,8 +935,75 @@ export const Editor: React.FC<EditorProps> = ({ data, onChange, onShowToast, onR
                                 </div>
                             )}
                         </div>
+                        {/* Skills Radar Chart */}
+                        {data.skills.length >= 3 && (() => {
+                            const topSkills = data.skills.slice(0, 6);
+                            const n = topSkills.length;
+                            const cx = 90, cy = 90, maxR = 70;
+                            const levels = [0.25, 0.5, 0.75, 1];
+                            const angleStep = (2 * Math.PI) / n;
+                            const pts = (scale: number) =>
+                                topSkills.map((_, i) => {
+                                    const ang = i * angleStep - Math.PI / 2;
+                                    return `${cx + maxR * scale * Math.cos(ang)},${cy + maxR * scale * Math.sin(ang)}`;
+                                }).join(' ');
+                            const skillPts = topSkills.map((sk, i) => {
+                                const ang = i * angleStep - Math.PI / 2;
+                                const r = (sk.level / 5) * maxR;
+                                return `${cx + r * Math.cos(ang)},${cy + r * Math.sin(ang)}`;
+                            }).join(' ');
+                            return (
+                                <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl">
+                                    <h4 className="font-bold text-sm mb-4 flex items-center gap-2 text-slate-700 dark:text-slate-200">
+                                        <Zap size={16} className="text-violet-500" /> Radar de Competências
+                                    </h4>
+                                    <div className="flex items-center gap-4">
+                                        <svg width="180" height="180" viewBox="0 0 180 180" className="flex-shrink-0">
+                                            <defs>
+                                                <linearGradient id="radarFill" x1="0" y1="0" x2="1" y2="1">
+                                                    <stop offset="0%" stopColor="#6366f1" stopOpacity="0.3" />
+                                                    <stop offset="100%" stopColor="#10b981" stopOpacity="0.3" />
+                                                </linearGradient>
+                                            </defs>
+                                            {levels.map(lv => (
+                                                <polygon key={lv} points={pts(lv)} fill="none" stroke="#e2e8f0" strokeWidth="1" />
+                                            ))}
+                                            {topSkills.map((_, i) => {
+                                                const ang = i * angleStep - Math.PI / 2;
+                                                return <line key={i} x1={cx} y1={cy} x2={cx + maxR * Math.cos(ang)} y2={cy + maxR * Math.sin(ang)} stroke="#e2e8f0" strokeWidth="1" />;
+                                            })}
+                                            <polygon points={skillPts} fill="url(#radarFill)" stroke="#6366f1" strokeWidth="2" strokeLinejoin="round" />
+                                            {topSkills.map((sk, i) => {
+                                                const ang = i * angleStep - Math.PI / 2;
+                                                const r = (sk.level / 5) * maxR;
+                                                return <circle key={i} cx={cx + r * Math.cos(ang)} cy={cy + r * Math.sin(ang)} r="3.5" fill="#6366f1" stroke="white" strokeWidth="1.5" />;
+                                            })}
+                                            {topSkills.map((sk, i) => {
+                                                const ang = i * angleStep - Math.PI / 2;
+                                                const lx = cx + (maxR + 14) * Math.cos(ang);
+                                                const ly = cy + (maxR + 14) * Math.sin(ang);
+                                                return <text key={i} x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize="8" fontWeight="600" fill="#64748b">{sk.name.slice(0, 10)}</text>;
+                                            })}
+                                        </svg>
+                                        <div className="space-y-1.5 flex-1 min-w-0">
+                                            {topSkills.map((sk, i) => (
+                                                <div key={i} className="flex items-center gap-2">
+                                                    <span className="text-[10px] text-slate-500 truncate w-16">{sk.name}</span>
+                                                    <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-gradient-to-r from-violet-400 to-emerald-400 rounded-full" style={{ width: `${(sk.level / 5) * 100}%` }} />
+                                                    </div>
+                                                    <span className="text-[10px] font-bold text-slate-400">{sk.level}/5</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
                     </div>
                 )}
+
 
                 {/* --- COVER LETTER TAB --- */}
                 {activeTab === 'cover' && (
