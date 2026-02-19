@@ -1,92 +1,294 @@
 
 import React from 'react';
-import { Edit2, Eye, Briefcase, Linkedin, Bot, UserPlus, Save, RotateCcw, EyeOff, Sun, Moon, HelpCircle, Palette, Printer } from 'lucide-react';
+import { Edit2, Eye, Briefcase, Bot, UserPlus, Save, Trash2, EyeOff, Sun, Moon, HelpCircle, Palette, Printer, ChevronDown, LinkedinIcon } from 'lucide-react';
 import { ResumeData } from '../../types';
 
 interface NavbarProps {
-    resumeData: ResumeData;
-    focusMode: boolean;
-    showMobilePreview: boolean;
-    setShowMobilePreview: (v: boolean) => void;
-    setShowJobTracker: (v: boolean) => void;
-    setShowLinkedinGenerator: (v: boolean) => void;
-    setShowAISettings: (v: boolean) => void;
-    showProfileMenu: boolean;
-    setShowProfileMenu: (v: boolean) => void;
-    handleOpenSaveProfile: () => void;
-    savedProfiles: ResumeData[];
-    loadProfile: (p: ResumeData) => void;
-    deleteProfile: (id: string, e: React.MouseEvent) => void;
-    togglePrivacyMode: () => void;
-    toggleDarkMode: () => void;
-    darkMode: boolean;
-    setShowOnboarding: (v: boolean) => void;
-    previewMode: 'resume' | 'cover';
-    setPreviewMode: (v: 'resume' | 'cover') => void;
-    showThemeSelector: boolean;
-    setShowThemeSelector: (v: boolean) => void;
-    setIsPrinting: (v: boolean) => void;
+  resumeData: ResumeData;
+  focusMode: boolean;
+  showMobilePreview: boolean;
+  setShowMobilePreview: (v: boolean) => void;
+  setShowJobTracker: (v: boolean) => void;
+  setShowLinkedinGenerator: (v: boolean) => void;
+  setShowAISettings: (v: boolean) => void;
+  showProfileMenu: boolean;
+  setShowProfileMenu: (v: boolean) => void;
+  handleOpenSaveProfile: () => void;
+  savedProfiles: ResumeData[];
+  loadProfile: (p: ResumeData) => void;
+  deleteProfile: (id: string, e: React.MouseEvent) => void;
+  togglePrivacyMode: () => void;
+  toggleDarkMode: () => void;
+  darkMode: boolean;
+  setShowOnboarding: (v: boolean) => void;
+  previewMode: 'resume' | 'cover';
+  setPreviewMode: (v: 'resume' | 'cover') => void;
+  showThemeSelector: boolean;
+  setShowThemeSelector: (v: boolean) => void;
+  setIsPrinting: (v: boolean) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = (props) => {
-    if (props.focusMode) return null;
+  if (props.focusMode) return null;
 
-    return (
-        <nav id="app-navbar" className="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 lg:px-6 shadow-sm z-50 flex-shrink-0 animate-slide-in">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-gradient-to-br from-trampo-500 to-trampo-700 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-trampo-500/20 transform hover:rotate-3 transition-transform cursor-default select-none">T</div>
-              <span className="font-display font-bold text-xl tracking-tight text-slate-800 dark:text-white hidden md:inline select-none">Trampo-lin</span>
-            </div>
-            
-            <div className="flex items-center gap-2 lg:gap-3">
-              {/* Mobile Preview Toggle */}
-              <button aria-label="Toggle Mobile Preview" onClick={() => props.setShowMobilePreview(!props.showMobilePreview)} className="md:hidden p-2 rounded-lg bg-trampo-50 dark:bg-slate-800 text-trampo-600 dark:text-slate-300 font-bold text-xs active:scale-95 transition-transform">
-                  {props.showMobilePreview ? <Edit2 size={18}/> : <Eye size={18}/>}
-              </button>
-              
-              <button aria-label="Open Job Tracker" onClick={() => props.setShowJobTracker(true)} className="hidden sm:flex items-center gap-2 px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all active:scale-95 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 text-sm font-medium" title="Gerenciar Vagas">
-                  <Briefcase size={18}/> <span className="hidden lg:inline">Vagas</span>
-              </button>
+  return (
+    <header
+      id="app-navbar"
+      className="h-16 flex-shrink-0 z-50 flex items-center justify-between px-4 lg:px-6
+                       bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl
+                       border-b border-slate-200/80 dark:border-slate-800/80
+                       shadow-[0_1px_0_0_rgba(0,0,0,0.04),0_2px_12px_rgba(0,0,0,0.04)]
+                       dark:shadow-[0_1px_0_0_rgba(255,255,255,0.03)]"
+    >
+      {/* ── Logo ── */}
+      <div className="flex items-center gap-3 select-none">
+        <div className="relative w-8 h-8 flex-shrink-0">
+          <div className="absolute inset-0 bg-gradient-to-br from-trampo-400 to-trampo-700 rounded-[10px] shadow-md shadow-trampo-500/30 hover:scale-110 transition-transform duration-200 cursor-default" />
+          <span className="absolute inset-0 flex items-center justify-center text-white font-black text-base leading-none">T</span>
+        </div>
+        <div className="hidden md:flex flex-col leading-none">
+          <span className="font-display font-bold text-[15px] tracking-tight text-slate-900 dark:text-white">Trampo-lin</span>
+          <span className="text-[10px] text-trampo-500 font-semibold tracking-wider uppercase">Currículo Pro</span>
+        </div>
+      </div>
 
-              <button aria-label="Open LinkedIn Generator" onClick={() => props.setShowLinkedinGenerator(true)} className="hidden sm:flex items-center gap-2 px-3 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all active:scale-95 border border-transparent hover:border-blue-100 dark:hover:border-blue-900 text-sm font-medium" title="Gerador de Perfil LinkedIn">
-                  <Linkedin size={18}/> <span className="hidden lg:inline">LinkedIn</span>
-              </button>
+      {/* ── Centro: Toggle CV/Carta ── */}
+      <div className="hidden sm:flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl gap-0.5 shadow-inner">
+        <button
+          onClick={() => props.setPreviewMode('resume')}
+          className={`px-5 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 active:scale-95
+                        ${props.previewMode === 'resume'
+              ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white ring-1 ring-black/[0.06] dark:ring-white/10'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+            }`}
+        >
+          CV
+        </button>
+        <button
+          onClick={() => props.setPreviewMode('cover')}
+          className={`px-5 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 active:scale-95
+                        ${props.previewMode === 'cover'
+              ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white ring-1 ring-black/[0.06] dark:ring-white/10'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+            }`}
+        >
+          CARTA
+        </button>
+      </div>
 
-              <button aria-label="AI Settings" onClick={() => props.setShowAISettings(true)} className="p-2.5 rounded-xl transition-all active:scale-95 text-slate-500 hover:text-trampo-600 hover:bg-trampo-50 dark:hover:bg-trampo-900/10" title="Configurar IA"><Bot size={20}/></button>
-              
-              <div className="relative">
-                <button aria-label="Profile Menu" onClick={() => props.setShowProfileMenu(!props.showProfileMenu)} className="px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl flex items-center gap-2 text-sm font-medium transition-all active:scale-95 border border-transparent hover:border-slate-200 dark:hover:border-slate-700" title="Gerenciar Perfis">
-                  <UserPlus size={18} /> <span className="hidden lg:inline truncate max-w-[120px]">{props.resumeData.profileName || 'Meu Currículo'}</span>
+      {/* ── Direita: Ações ── */}
+      <div className="flex items-center gap-1 lg:gap-1.5">
+
+        {/* Mobile: toggle editor/preview */}
+        <button
+          aria-label="Alternar visão mobile"
+          onClick={() => props.setShowMobilePreview(!props.showMobilePreview)}
+          className="md:hidden p-2 rounded-lg bg-trampo-50 dark:bg-slate-800 text-trampo-600 dark:text-slate-300 active:scale-95 transition-all"
+        >
+          {props.showMobilePreview ? <Edit2 size={18} /> : <Eye size={18} />}
+        </button>
+
+        {/* Separador */}
+        <div className="hidden sm:block h-5 w-px bg-slate-200 dark:bg-slate-700 mx-1" />
+
+        {/* Vagas */}
+        <NavBtn
+          label="Vagas"
+          title="Gerenciar Vagas (Job Tracker)"
+          onClick={() => props.setShowJobTracker(true)}
+          icon={<Briefcase size={16} />}
+          className="hidden sm:flex"
+        />
+
+        {/* LinkedIn */}
+        <NavBtn
+          label="LinkedIn"
+          title="Gerar Perfil LinkedIn com IA"
+          onClick={() => props.setShowLinkedinGenerator(true)}
+          icon={<LinkedinIcon size={16} />}
+          className="hidden lg:flex text-blue-600 dark:text-blue-400 hover:!bg-blue-50 dark:hover:!bg-blue-900/20 hover:!text-blue-700"
+        />
+
+        {/* IA Config */}
+        <button
+          aria-label="Configurar IA"
+          title="Configurações de IA"
+          onClick={() => props.setShowAISettings(true)}
+          className="p-2 rounded-xl text-slate-500 hover:text-trampo-600 hover:bg-trampo-50 dark:hover:bg-trampo-900/20 dark:hover:text-trampo-400 transition-all active:scale-95"
+        >
+          <Bot size={18} />
+        </button>
+
+        {/* Tema */}
+        <button
+          aria-label="Selecionar Tema"
+          title="Temas visuais"
+          onClick={() => props.setShowThemeSelector(!props.showThemeSelector)}
+          className={`p-2 rounded-xl transition-all active:scale-95
+                        ${props.showThemeSelector
+              ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
+              : 'text-slate-500 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20'
+            }`}
+        >
+          <Palette size={18} />
+        </button>
+
+        {/* Privacidade */}
+        <button
+          aria-label={props.resumeData.settings.privacyMode ? 'Desativar modo privacidade' : 'Ativar modo privacidade'}
+          title={props.resumeData.settings.privacyMode ? 'Modo Privacidade ativo — clique para desativar' : 'Ativar Modo Privacidade'}
+          onClick={props.togglePrivacyMode}
+          className={`p-2 rounded-xl transition-all active:scale-95
+                        ${props.resumeData.settings.privacyMode
+              ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
+              : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+        >
+          <EyeOff size={18} />
+        </button>
+
+        {/* Dark mode */}
+        <button
+          aria-label="Alternar modo escuro"
+          title={props.darkMode ? 'Modo claro' : 'Modo escuro'}
+          onClick={props.toggleDarkMode}
+          className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95"
+        >
+          {props.darkMode ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+
+        {/* Ajuda */}
+        <button
+          aria-label="Ajuda / Tutorial"
+          title="Ver tutorial"
+          onClick={() => props.setShowOnboarding(true)}
+          className="hidden sm:block p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95"
+        >
+          <HelpCircle size={16} />
+        </button>
+
+        {/* Separador */}
+        <div className="hidden sm:block h-5 w-px bg-slate-200 dark:bg-slate-700 mx-1" />
+
+        {/* Perfis */}
+        <div className="relative">
+          <button
+            aria-label="Gerenciar perfis"
+            title="Perfis salvos"
+            onClick={() => props.setShowProfileMenu(!props.showProfileMenu)}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium
+                                   text-slate-600 dark:text-slate-300
+                                   hover:bg-slate-100 dark:hover:bg-slate-800
+                                   border border-transparent hover:border-slate-200 dark:hover:border-slate-700
+                                   transition-all active:scale-95"
+          >
+            <UserPlus size={15} />
+            <span className="hidden lg:inline max-w-[90px] truncate text-xs">
+              {props.resumeData.profileName || 'Meu Currículo'}
+            </span>
+            <ChevronDown size={13} className={`transition-transform duration-200 ${props.showProfileMenu ? 'rotate-180' : ''}`} />
+          </button>
+
+          {props.showProfileMenu && (
+            <div className="absolute top-[calc(100%+8px)] right-0 w-64
+                                        bg-white dark:bg-slate-800
+                                        shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)]
+                                        border border-slate-200/80 dark:border-slate-700/80
+                                        rounded-2xl overflow-hidden z-50 animate-scale-in">
+
+              <div className="p-2">
+                <button
+                  onClick={props.handleOpenSaveProfile}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-bold
+                                               text-trampo-600 dark:text-trampo-400
+                                               hover:bg-trampo-50 dark:hover:bg-trampo-900/20
+                                               rounded-xl border border-dashed border-trampo-200 dark:border-trampo-800
+                                               transition-all active:scale-[0.98]"
+                >
+                  <Save size={13} /> SALVAR VERSÃO ATUAL
                 </button>
-                {props.showProfileMenu && (
-                  <div className="absolute top-14 right-0 w-64 bg-white dark:bg-slate-800 shadow-2xl border border-slate-200 dark:border-slate-700 rounded-2xl p-2 z-50 animate-in slide-in-from-top-2 duration-200">
-                    <div className="p-2">
-                        <button onClick={props.handleOpenSaveProfile} className="w-full text-left p-2.5 text-xs font-bold hover:bg-trampo-50 dark:hover:bg-trampo-900/20 rounded-lg flex gap-2 items-center text-trampo-600 dark:text-trampo-400 mb-2 border border-dashed border-trampo-200 dark:border-trampo-800 transition-colors"><Save size={14}/> SALVAR VERSÃO ATUAL</button>
-                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 pl-2">Salvos</div>
-                        <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-1">
-                            {props.savedProfiles.map(p => (
-                            <div key={p.id} className="flex group">
-                                <button onClick={() => props.loadProfile(p)} className="flex-1 text-left p-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-700 rounded-l-lg truncate text-slate-600 dark:text-slate-300 font-medium transition-colors">{p.profileName}</button>
-                                <button aria-label="Delete Profile" onClick={(e) => props.deleteProfile(p.id!, e)} className="p-2 hover:bg-red-50 dark:hover:bg-red-900/30 text-slate-300 hover:text-red-500 rounded-r-lg transition-colors"><RotateCcw size={12} className="rotate-45"/></button>
-                            </div>
-                            ))}
-                            {props.savedProfiles.length === 0 && <p className="text-xs text-slate-400 text-center py-4 italic">Nenhum perfil salvo.</p>}
-                        </div>
-                    </div>
+              </div>
+
+              {props.savedProfiles.length > 0 && (
+                <>
+                  <div className="px-4 pb-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Salvos</span>
                   </div>
-                )}
-              </div>
-              <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block"></div>
-              <button aria-label="Privacy Mode" onClick={props.togglePrivacyMode} className={`p-2.5 rounded-xl transition-all active:scale-95 ${props.resumeData.settings.privacyMode ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`} title="Modo Privacidade (Blur)"><EyeOff size={18}/></button>
-              <button aria-label="Toggle Dark Mode" onClick={props.toggleDarkMode} className="p-2.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all active:scale-95">{props.darkMode ? <Sun size={18}/> : <Moon size={18}/>}</button>
-              <button aria-label="Onboarding" onClick={() => props.setShowOnboarding(true)} className="hidden sm:block p-2.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all active:scale-95" title="Ajuda"><HelpCircle size={18}/></button>
-              <div className="hidden sm:flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-                  <button onClick={() => props.setPreviewMode('resume')} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all active:scale-95 ${props.previewMode === 'resume' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white ring-1 ring-black/5' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>CV</button>
-                  <button onClick={() => props.setPreviewMode('cover')} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all active:scale-95 ${props.previewMode === 'cover' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white ring-1 ring-black/5' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>CARTA</button>
-              </div>
-              <button aria-label="Theme Selector" onClick={() => props.setShowThemeSelector(!props.showThemeSelector)} className={`p-2.5 rounded-xl transition-all active:scale-95 ${props.showThemeSelector ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300' : 'text-slate-500 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10'}`} title="Temas"><Palette size={20}/></button>
-              <button onClick={() => props.setIsPrinting(true)} className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 text-white rounded-xl text-sm font-bold shadow-lg shadow-slate-900/20 dark:shadow-white/5 transition-all active:scale-95" title="Baixar PDF (Ctrl+P)"><Printer size={18}/> <span>Baixar</span></button>
+                  <div className="max-h-52 overflow-y-auto px-2 pb-2 space-y-0.5">
+                    {props.savedProfiles.map(p => (
+                      <div key={p.id} className="flex items-center group rounded-xl overflow-hidden hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                        <button
+                          onClick={() => props.loadProfile(p)}
+                          className="flex-1 text-left px-3 py-2 min-w-0"
+                        >
+                          <span className="block text-xs font-medium text-slate-700 dark:text-slate-200 truncate">{p.profileName}</span>
+                          {(p as any).createdAt && (
+                            <span className="text-[10px] text-slate-400">
+                              {new Date((p as any).createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </span>
+                          )}
+                        </button>
+                        <button
+                          aria-label="Excluir perfil"
+                          onClick={(e) => props.deleteProfile(p.id!, e)}
+                          className="p-2 mr-1 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {props.savedProfiles.length === 0 && (
+                <p className="text-xs text-slate-400 text-center py-4 pb-5 italic">Nenhum perfil salvo.</p>
+              )}
             </div>
-        </nav>
-    );
+          )}
+        </div>
+
+        {/* CTA: Imprimir */}
+        <button
+          onClick={() => props.setIsPrinting(true)}
+          title="Imprimir / Baixar PDF (Ctrl+P)"
+          className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold
+                               bg-gradient-to-b from-slate-800 to-slate-900
+                               dark:from-white dark:to-slate-100
+                               text-white dark:text-slate-900
+                               shadow-md shadow-slate-900/20 dark:shadow-black/20
+                               hover:shadow-lg hover:shadow-slate-900/30
+                               hover:from-slate-700 hover:to-slate-800
+                               dark:hover:from-slate-100 dark:hover:to-white
+                               transition-all duration-200 active:scale-95 active:shadow-sm"
+        >
+          <Printer size={16} />
+          <span>PDF</span>
+        </button>
+      </div>
+    </header>
+  );
 };
+
+// ── Helper: botão de nav ──────────────────────────────────────────
+interface NavBtnProps {
+  label: string;
+  title: string;
+  onClick: () => void;
+  icon: React.ReactNode;
+  className?: string;
+}
+const NavBtn: React.FC<NavBtnProps> = ({ label, title, onClick, icon, className = '' }) => (
+  <button
+    title={title}
+    onClick={onClick}
+    className={`items-center gap-1.5 px-2.5 py-1.5 rounded-xl
+                   text-xs font-medium text-slate-600 dark:text-slate-300
+                   hover:bg-slate-100 dark:hover:bg-slate-800
+                   border border-transparent hover:border-slate-200 dark:hover:border-slate-700
+                   transition-all active:scale-95 ${className}`}
+  >
+    {icon}
+    <span className="hidden xl:inline">{label}</span>
+  </button>
+);
