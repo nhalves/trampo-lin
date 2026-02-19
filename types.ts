@@ -117,7 +117,7 @@ export interface ResumeSettings {
   grayscale: boolean;
   privacyMode: boolean;
   aiTone: 'professional' | 'creative' | 'academic' | 'enthusiastic';
-  
+
   // New Features
   backgroundPattern: 'none' | 'dots' | 'grid' | 'lines' | 'geometric';
   glassmorphism: boolean;
@@ -134,6 +134,7 @@ export interface CoverLetterData {
 export interface ResumeData {
   id?: string;
   profileName?: string;
+  createdAt?: string; // #14 — Data de criação do perfil (ISO 8601)
   personalInfo: {
     fullName: string;
     jobTitle: string;
@@ -173,7 +174,7 @@ export interface AIConfig {
   model: string;
 }
 
-export type ThemeId = 
+export type ThemeId =
   | 'modern-slate'
   | 'executive-gold'
   | 'tech-lead-dark'
